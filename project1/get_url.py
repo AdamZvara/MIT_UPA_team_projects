@@ -9,7 +9,6 @@ Date: 25/09/2024
 import requests
 from bs4 import BeautifulSoup
 
-
 def retrieve(url, max=150):
     URLs = []
     retrieved = 0
