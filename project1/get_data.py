@@ -1,5 +1,5 @@
 """
-Get parameters of mobile devices from https://www.mobilpc.sk/smartfony-c799
+Get parameters of mobile devices from https://www.mobilplus.sk/
 website and print them as TLV (Type-Length-Value) encoded strings.
 
 The URLs are loaded from stdin and must be separated by newlines.
@@ -8,7 +8,7 @@ Authors: xzvara01, xvlkja07
 Date: 26/09/2024
 """
 
-import requests, sys, re
+import requests, sys
 from bs4 import BeautifulSoup
 
 class Scraper:
@@ -17,63 +17,66 @@ class Scraper:
         # Get the HTML content of the URL
         req = requests.get(url)
         self.soup = BeautifulSoup(req.text, "html.parser")
+        self.loaded_data = [url]
+        # Always load name and price
+        for f in ["name", "price"]:
+            self.loaded_data.append(getattr(self, f)())
+        # The site usually has table with parameters of the phone, retrieve all headers from the table so we can look for them later
+        try:
+            self.table_headers = self.soup.find("div", class_="extended-description").find_all("span", class_="row-header-label")
+        except AttributeError:
+            self.loaded_data += [None] * 5
+            return
         # Call all functions to get parameters of the phone
-        data_fun = ["name", "price", "size", "battery", "procspeed", "procname", "osversion"]
-        self.data = [url]
-        for df in data_fun:
-            self.data.append(getattr(self, df)())
+        data_fun = ["size", "battery", "procspeed", "backcamera", "os"]
+        for f in data_fun:
+            self.loaded_data.append(getattr(self, f)())
 
     def print_data(self):
         """ Print data in TLV format """
-        for d in self.data:
+        for d in self.loaded_data:
             print(d, end='\t')
         print()
 
     def name(self):
         """ Return name of the phone """
-        return self.soup.find("h1", class_="HeadingView").get_text()
+        return self.soup.find("div", class_="p-detail-inner-header").find("h1").get_text().split('\n')[0].strip()
 
     def price(self):
         """ Return price of the phone (in EUR) """
-        return self.soup.find("meta", property="og:price:amount").get("content")
+        possible_price = self.soup.find("span", class_="price-final-holder parameter-dependent default-variant")
+        # Sometimes price is stored at 2 different places
+        if possible_price:
+            price = possible_price.find("span")
+        else:
+            price = self.soup.find("span", class_="price-final-holder")
+        return price.get_text().strip()[1:]
 
-    def generic_td_elem(self, elem, text, split=True):
-        """ Return value of generic element which contains some text """
-        try:
-            # Product parameters are stored in a table, find the right row and get the value
-            value = self.soup.find(elem, string=text).find_next("td").get_text()
-        except AttributeError:
-            return None
-        # Sometimes we need to split the value (e.g. to get only the dimension)
-        return value.split()[0] if split else value
+    def get_table_element(self, caption):
+        """ Generic function to retrieve data from self.table_headers based on caption """
+        for header in self.table_headers:
+            if caption in header.get_text():
+                return header.find_next("td").get_text().strip()
 
     def size(self):
         """ Return size of the phone """
-        return self.generic_td_elem("span", "Uhlopriečka displeja")
+        return self.get_table_element("Velikost displeje")
 
     def battery(self):
         """ Return battery capacity of the phone (in mAh) """
-        possible_bat = self.generic_td_elem("td", "Kapacita batérie")
-        if possible_bat:
-            return possible_bat
-        # Sometimes the battery is freely in text, use regex to match it
-        regexp = re.findall(r'\b\d\s\d+\s*mAh\b', self.soup.get_text())
-        if regexp:
-            return "".join(regexp[0].split()[:-1])
+        return self.get_table_element("Kapacita baterie")
 
     def procspeed(self):
         """ Return processor speed of the phone (in GHz) """
-        return self.generic_td_elem("td", "Rýchlosť procesora")
+        return self.get_table_element("Max. frekvence procesoru")
 
-    def procname(self):
+    def backcamera(self):
         """ Return processor name of the phone """
-        possible_proc = self.generic_td_elem("td", "Označenie procesora")
-        # Processor name is sometimes stored in a different element
-        return possible_proc if possible_proc else self.generic_td_elem("td", "Značka procesora")
+        return self.get_table_element("Zadní fotoaparát")
 
-    def osversion(self):
+    def os(self):
         """ Return operating system version of the phone """
-        return self.generic_td_elem("td", "Verzia operačného systému", False)
+        return self.get_table_element("Technologie displeje")
 
 if __name__ == "__main__":
     scraper = Scraper()
