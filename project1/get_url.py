@@ -1,12 +1,14 @@
 """
 Web scraper for URLs of mobile phones on https://www.mobilpc.sk/smartfony-c799/
-This app looks for 150 mobile phones and prints their URLs for further processing.
+This app looks for 150 (unique) mobile phones and prints their URLs for further processing.
 
 Authors: xzvara01, xvlkja07
+Date: 25/09/2024
 """
 
 import requests
 from bs4 import BeautifulSoup
+
 
 def retrieve(url, max=150):
     URLs = []
@@ -23,8 +25,9 @@ def retrieve(url, max=150):
             if unique_retrieved >= max:
                 break
             link = product.find("a", class_="image").get("href")
-            # Parameters specify size of RAM and storage, we want to remove them
-            core_url = "".join(link.split("?")[:-1])
+            # URL parameters after ? specify size of RAM and storage, we want to remove
+            # them to get unique phone models
+            core_url = link.split("?")[0]
             if core_url not in URLs:
                 URLs.append(core_url)
                 unique_retrieved += 1
@@ -33,8 +36,8 @@ def retrieve(url, max=150):
     return URLs
 
 if __name__ == "__main__":
-    # f parameter is used to display different pages of products
-    BASE_URL = "https://www.mobilpc.sk/smartfony-c799/?f="
+    BASE_URL = "https://www.mobilpc.sk/smartfony-c799"
 
-    for endpoint in retrieve(BASE_URL):
-        print(BASE_URL[:-4] + endpoint)
+    # 'f' URL parameter is used to display different pages of products
+    for endpoint in retrieve(BASE_URL + "/?f="):
+        print(BASE_URL + endpoint)
