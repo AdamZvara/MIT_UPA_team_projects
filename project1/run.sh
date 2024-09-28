@@ -1,7 +1,7 @@
 #!/bin/bash
 
 URL_PROG='get_url.py'
-PARAM_PROG='get_params.py'
+PARAM_PROG='get_data.py'
 URL_OUT='url_test.txt'
 
 if [ ! $(which python3) ]; then
