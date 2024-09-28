@@ -5,7 +5,7 @@ website and print them as TLV (Type-Length-Value) encoded strings.
 The URLs are loaded from stdin and must be separated by newlines.
 
 Authors: xzvara01, xvlkja07
-Date: 26/09/2024
+Date: 09/2024
 """
 
 import requests, sys
@@ -33,14 +33,14 @@ class Scraper:
             self.loaded_data.append(getattr(self, f)())
 
     def print_data(self):
-        """ Print data in TLV format """
+        """ Print data in TSV format """
         for d in self.loaded_data:
             print(d, end='\t')
         print()
 
     def name(self):
         """ Return name of the phone """
-        return self.soup.find("div", class_="p-detail-inner-header").find("h1").get_text().split('\n')[0].strip()
+        return self.soup.find("div", class_="p-detail-inner-header").find("h1").get_text().strip().split('\n')[0]
 
     def price(self):
         """ Return price of the phone (in EUR) """
