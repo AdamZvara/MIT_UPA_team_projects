@@ -26,7 +26,7 @@ Dataset je dostupný iba vo formáte CSV, ktorý je podporovaný pre priame nač
 z praktického dôvodu (aby neobsahovali diakritiku a medzery). Všetky operácie nad datasetom som vykonal v docker kontajneri s aktívnou MongoDB inštanciou. Po spustení
 databázy som importoval dáta z CSV súboru pomocou príkazu (`--headerline` - prvý riadok obsahuje hlavičky, `--ignoreBlanks` - ignoruje prázdne hodnoty):
 
-```
+```bash
 mongoimport -d UPA -c pocit_mapa --type=csv --headerline --ignoreBlanks pocitova_mapa_2023.csv
 ```
 
@@ -69,7 +69,7 @@ db.pocit_mapa.aggregate([
 
 čo vráti výsledok:
 
-```
+```bash
 [
   { _id: 'Místo, kde se necítím dobře', count: 200 },
   { _id: 'Místo, které by se mělo rozvíjet', count: 74 },
@@ -99,7 +99,7 @@ potom môžeme využiť pri tvorbe plánu rozvoja mesta. Príklad takéhoto vyu�
 
 Kde výsledkom je zoznam komentárov k miestam, ktoré by sa mali rozvíjať:
 
-```
+```bash
 [
   { Komentar: 'Zastávka Náměstí republiky' },
   { Komentar: 'Pokud "není možná" likvidace a návrat k historickému úrovňovému řešené ulice...'},
@@ -107,22 +107,105 @@ Kde výsledkom je zoznam komentárov k miestam, ktoré by sa mali rozvíjať:
 ]
 ```
 
-## Databáza časových rád
+## Databáza časových radov
 
 **Názov**: Dopravní přestupky dle data a místa spáchání v roce 2024<br>
 **Odkaz**: https://opendata.ostrava.cz/soubory/DatovyPortal/prestupky/20240101_20240630_dopravniprestupky.csv<br>
 **Distribúcia**: CSV<br>
 **Druh databázy**: InfluxDB<br>
 
-Vymazanie chybného riadku
-`23945,0202-05-16," " ,56/2001,83,1,b),,pokuta`
+Dataset dopravných priestupkov spáchaných v roku 2024 obsahuje záznamy o priestupkoch, ktoré boli zaznamenané políciou v Ostrave. Pre
+tento dataset sme zvolili databázu časových radov InfluxDB, ktorá je špeciálne navrhnutá pre ukladanie časových dát a ich analýzu.
+Pri výbere vhodného datasetu pre túto databázu sme si uvedomovali, že tento dataset nemusí nevyhnutne predstavovať
+najlepšie vyhovujúci príklad pre InfluxDB, avšak neboli sme schopní z voľne dostupných dát nájsť vhodnejší dataset (napríklad
+merania z rôznych senzorov, pre ktoré by bola táto databáza vhodnejšia).
 
-Prevedenie dát z CSV do influx line protokolu (prečo som nepoužil extended CSV - pretože timestamp
-mám iný formát):
-    - dátum na timestamp
-    - neuvažujeme riešenie pretože veľa dát ho nemá, taktiež číslo priestupku
-    - tag = popis miesta + číslo zákona
-    - fields = ostatné veci
+Záznamy datasetu sú vo formáte CSV a obsahujú následujúce informácie:
+  - Číslo prípadu
+  - Miesto priesupku (voľný text)
+  - Identifikácia priestupku: číslo zákona, paragraf, odstavec, písmeno a bod
+  - Dátum spáchania: deň, mesiac a rok
 
-proces nastavenia influx ():
-    spustenie serveru,
+V prvom rade je nutné prevedenie CSV formátu do Influx line protokolu pomocou priloženého skriptu `csv_to_influx.py`. Pred samotným
+prevedením sme manuálne upravili chyby vyskytujúce sa v datasete, kvôli ktorým nemohol byť automaticky spracovaný alebo načítaný do
+databázy. Medzi tieto chyby patrili:
+  - chybný dátum: `0202-05-16` pre prípad s číslom `23945` (záznam sme vymazali)
+  - miesto činu obsahuje (neescapnuté) úvodzovky a poruší automatizované spracovanie: `" v Ostravě na ulici Hlučínská /autobusová zastávka "Přívoz\,Hllučínská"/"` - čísla prípadov `7390`, `28975` (zo záznamov sme odstránili úvodzovky)
+  - text v čísle prípadu: `10888-P` (zo záznamu sme odstránili `-P`)
+
+Zaroveň sme transformovali dátum do formátu Unix timestamp. V neposlednom rade je dôležité si premyslieť rozloženie jednotlivých
+atribútov do tagov a fields. Zvolili sme variant, kde `measurement` obsahuje základné parametre typu priestupku, ktoré sú tvorené
+trojicou `cislo_zakona-paragraf-odstavec`. Teda napríklad:
+  - `361/2000-125c-1` - priestupok fyzickej osoby na premávke na pozemnej komunikácii
+  - `361/2000-125f-1` - priestupok prevozovateľa vozidla
+  - `168/1999-16-1` - porušenie registrácie vozidla
+
+V prípade, že zákon je ďalej špecifikovaný písmenom a bodom, môžeme tieto informácie zahrnúť do tagov pre lepšie zoskupovanie a
+filtrovanie (nie každý measurement obsahuje tieto tagy). Príkladom môže byť zákon `361/2000-125c-1`, ktorý môže byť ďalej
+konkretizovaný na činy:
+  - `pismeno=f,bod=2` - prekročenie rýchlosti o 40 km/h v obci alebo 50 km/h mimo obce
+  - `pismeno=f,bod=3` - prekročenie rýchlosti o 20 km/h v obci alebo 30 km/h mimo obce
+  - `pismeno=f,bod=8` - nedatie prednosti v jazde
+  - `pismeno=i,bod=1` - nezastavenie vozidla na znamenie policajta
+
+Každý záznam napokon obsahuje field `miesto` a `cislo_pripadu`. Teda celkový príklad záznamu v Influx Line protokole môže vyzerať nasledovne:
+
+```
+361/2000-125c-1,pismeno=k,bod=0 misto_cinu="v Klimkovicích po ulci Lidické, zastávka MHD",cislo_pripadu=0014 1698620400
+```
+
+Všetky operácie nad datasetom sme vykonali v docker kontajneri s aktívnou InfluxDB inštanciou (verzia 1.8.10 kompatibilná s príkladmi
+z prednášok). Po spustení databázy sme vytvorili databázu `driving_tickets`:
+
+```bash
+influx -execute 'CREATE DATABASE driving_tickets'
+```
+
+Následne môžeme importovať dáta z prevedeného CSV súboru (vznikol z `csv_to_influx.py`):
+
+```bash
+root@e5bc91132687:/# influx -import -path=tickets.txt -precision=s -database=driving_tickets
+2024/11/02 16:55:31 Processed 1 commands
+2024/11/02 16:55:31 Processed 29736 inserts
+2024/11/02 16:55:31 Failed 0 inserts
+```
+
+Nad dátami následne vieme realizovať rozličné dotazy, napríklad na vypísanie miest všetkých priestupkov spojených s prekročením rýchlosti
+v máji (5. mesiac) 2024 (realizované v InfluxQL):
+```sql
+SELECT misto_cinu FROM "361/2000-125c-1" WHERE pismeno='f' AND (bod='2' OR bod='3' OR bod='4') AND time > '2024-05-01 00:00:00' AND time < '2024-05-31 23:59:59'
+```
+
+čo vráti výsledok:
+
+```
+2024-05-01T22:00:00Z na dálnici D1 v 366,9 km ve směru jízdy na Brno
+2024-05-02T22:00:00Z na dálnici D1 na 367 km ve směru na Brno
+2024-05-02T22:00:00Z č.p. 134/25, přechod
+...
+```
+
+Prípadne nás môže zaujímať celkový počet prípadov prerušenia pravidiel premávky v jednotlivých mesiacoch na prelome rokov 2023/2024:
+
+```sql
+SELECT count(cislo_pripadu) FROM "361/2000-125c-1" WHERE time > '2023-08-01' GROUP BY time(4w)
+```
+
+s výsledkom:
+
+```
+2023-07-06T00:00:00Z 0
+2023-08-03T00:00:00Z 4
+2023-08-31T00:00:00Z 15
+2023-09-28T00:00:00Z 11
+2023-10-26T00:00:00Z 49
+2023-11-23T00:00:00Z 155
+2023-12-21T00:00:00Z 195
+2024-01-18T00:00:00Z 249
+2024-02-15T00:00:00Z 266
+2024-03-14T00:00:00Z 240
+2024-04-11T00:00:00Z 227
+2024-05-09T00:00:00Z 221
+2024-06-06T00:00:00Z 23
+...
+```
