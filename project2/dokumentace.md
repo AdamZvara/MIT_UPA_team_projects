@@ -1,4 +1,4 @@
-## Dokumentová databáza
+# Dokumentová databáza
 
 **Názov**: Pocitová mapa míst 2023<br>
 **Odkaz**: https://opendata.ostrava.cz/soubory/DatovyPortal/pocitova_mapa_2023.csv<br>
@@ -22,6 +22,8 @@ využiť súradnice miesta na zobrazenie miest v okolí alebo na vyhľadanie mie
 analýze dát a získaniu informácií o najfrekventovanejších miestach v okolí alebo o miestach, ktoré by mohli byť zaujímavé pre návštevníkov. Prípadne
 môže byť zaujímavé filtrovanie nepríjemných miest alebo miest, ktoré by mohli byť ďalej rozvíjané a prispôsobiť plán úpravy mesta podľa požiadaviek obyvateľov (komentárov).
 
+## Vloženie dát a definícia schématu
+
 Dataset je dostupný iba vo formáte CSV, ktorý je podporovaný pre priame načítanie do MongoDB. Pred samotným načítaním datasetu som manuálne pozmenil názvy stĺpcov čisto
 z praktického dôvodu (aby neobsahovali diakritiku a medzery). Všetky operácie nad datasetom som vykonal v docker kontajneri s aktívnou MongoDB inštanciou. Po spustení
 databázy som importoval dáta z CSV súboru pomocou príkazu (`--headerline` - prvý riadok obsahuje hlavičky, `--ignoreBlanks` - ignoruje prázdne hodnoty):
@@ -39,6 +41,8 @@ Tieto operácie som vykonal priamo v `mongosh`:
 db.pocit_mapa.updateMany({}, [{ $set: { location: { type: "Point", coordinates: [ "$X", "$Y"]}}}])
 db.pocit_mapa.createIndex({ location: "2dsphere" })
 ```
+
+## Ukážka dotazov
 
 Následne je možné vykonávať rôzne dotazy nad dátami, k čomu je praktické využitie agregačnej pipeline. V následujúcom príklade zisťujem počet recenzií jednotlivých typy pocitov
 v okruhu konkrétneho miesta (napr. 100 metrov - môžeme prakticky považovať za jednu lokalitu). Výsledok je zoradený podľa počtu recenzií zostupne:
@@ -67,7 +71,7 @@ db.pocit_mapa.aggregate([
 ])
 ```
 
-čo vráti výsledok:
+**Output:**
 
 ```bash
 [
@@ -78,9 +82,10 @@ db.pocit_mapa.aggregate([
 ]
 ```
 
-V závislosti od používania databázy by bolo praktické vytvoriť indexy aj nad inými poliami databázy, napr. `login` pre jednoduché vyhľadanie komentárov od užívateľa v prípade,
-ak by ich chcel zmeniť alebo index nad `pocit` v kombinácií s `komentar` (jeho existencia) v prípade častého dotazovania sa na navrhované zmeny, ktoré
-potom môžeme využiť pri tvorbe plánu rozvoja mesta. Príklad takéhoto využitia je v pozmenení predcházajúcej agregačnej pipeline, kde zobrazujeme komentáre k miestam, ktoré by sa mali rozvíjať.
+V závislosti od používania databázy by bolo praktické vytvoriť indexy aj nad inými poliami databázy, napr. `login` pre jednoduché vyhľadanie komentárov od užívateľa v
+prípade, ak by ich chcel zmeniť alebo index nad `pocit` v kombinácií s `komentar` (jeho existencia) v prípade častého dotazovania sa na navrhované zmeny, ktoré
+potom môžeme využiť pri tvorbe plánu rozvoja mesta. Príklad takéhoto využitia je v pozmenení predcházajúcej agregačnej pipeline, kde zobrazujeme komentáre k miestam,
+ktoré by sa mali rozvíjať.
 
 ```
 {
@@ -97,7 +102,7 @@ potom môžeme využiť pri tvorbe plánu rozvoja mesta. Príklad takéhoto vyu�
 }
 ```
 
-Kde výsledkom je zoznam komentárov k miestam, ktoré by sa mali rozvíjať:
+**Output:**
 
 ```bash
 [
@@ -107,7 +112,7 @@ Kde výsledkom je zoznam komentárov k miestam, ktoré by sa mali rozvíjať:
 ]
 ```
 
-## Databáza časových radov
+# Databáza časových radov
 
 **Názov**: Dopravní přestupky dle data a místa spáchání v roce 2024<br>
 **Odkaz**: https://opendata.ostrava.cz/soubory/DatovyPortal/prestupky/20240101_20240630_dopravniprestupky.csv<br>
@@ -126,6 +131,12 @@ Záznamy datasetu sú vo formáte CSV a obsahujú následujúce informácie:
   - Identifikácia priestupku: číslo zákona, paragraf, odstavec, písmeno a bod
   - Dátum spáchania: deň, mesiac a rok
 
+Využitie vlastností InfluxDB spočíva v možnosti rýchleho filtrovania a zoskupovania dát podľa časových značiek a ďalších atribútov, ktoré si
+definujeme v následujúcej sekcii. Zároveň dataset obsahuje nemalé množstvo záznamov (cca 30 tisíc), pre ktoré je použitie distribuovanej
+databázy vhodné.
+
+## Vloženie dát a definícia schématu
+
 V prvom rade je nutné prevedenie CSV formátu do Influx line protokolu pomocou priloženého skriptu `csv_to_influx.py`. Pred samotným
 prevedením sme manuálne upravili chyby vyskytujúce sa v datasete, kvôli ktorým nemohol byť automaticky spracovaný alebo načítaný do
 databázy. Medzi tieto chyby patrili:
@@ -133,8 +144,8 @@ databázy. Medzi tieto chyby patrili:
   - miesto činu obsahuje (neescapnuté) úvodzovky a poruší automatizované spracovanie: `" v Ostravě na ulici Hlučínská /autobusová zastávka "Přívoz\,Hllučínská"/"` - čísla prípadov `7390`, `28975` (zo záznamov sme odstránili úvodzovky)
   - text v čísle prípadu: `10888-P` (zo záznamu sme odstránili `-P`)
 
-Zaroveň sme transformovali dátum do formátu Unix timestamp. V neposlednom rade je dôležité si premyslieť rozloženie jednotlivých
-atribútov do tagov a fields. Zvolili sme variant, kde `measurement` obsahuje základné parametre typu priestupku, ktoré sú tvorené
+Zaroveň sme transformovali dátum do formátu Unix časovej značky (v sekundách). V neposlednom rade je dôležité si premyslieť rozloženie jednotlivých
+atribútov do tagov a fieldov. Zvolili sme variant, kde `measurement` obsahuje základné parametre typu priestupku, ktoré sú tvorené
 trojicou `cislo_zakona-paragraf-odstavec`. Teda napríklad:
   - `361/2000-125c-1` - priestupok fyzickej osoby na premávke na pozemnej komunikácii
   - `361/2000-125f-1` - priestupok prevozovateľa vozidla
@@ -154,6 +165,11 @@ Každý záznam napokon obsahuje field `miesto` a `cislo_pripadu`. Teda celkový
 361/2000-125c-1,pismeno=k,bod=0 misto_cinu="v Klimkovicích po ulci Lidické, zastávka MHD",cislo_pripadu=0014 1698620400
 ```
 
+Je zrejmé, že existuje viacero možností ako vytvoriť schéma databázy v závislosti od jej použitia. V tomto prípade sme sa rozhodli
+pre variant, ktorý umožňuje rýchle filtrovanie a zoskupovanie podľa typu priestupku (tagy, nad ktorými je vytvorený index) ale napríklad neumožňuje
+zoskupovanie podľa miesta činu (field). V prípade, že by sme chceli zoskupovať podľa miesta, mohli by sme zvoliť variant, kde `misto_cinu` je tag
+a `cislo_pripadu` je field.
+
 Všetky operácie nad datasetom sme vykonali v docker kontajneri s aktívnou InfluxDB inštanciou (verzia 1.8.10 kompatibilná s príkladmi
 z prednášok). Po spustení databázy sme vytvorili databázu `driving_tickets`:
 
@@ -170,13 +186,16 @@ root@e5bc91132687:/# influx -import -path=tickets.txt -precision=s -database=dri
 2024/11/02 16:55:31 Failed 0 inserts
 ```
 
+## Ukážka dotazov
+
 Nad dátami následne vieme realizovať rozličné dotazy, napríklad na vypísanie miest všetkých priestupkov spojených s prekročením rýchlosti
 v máji (5. mesiac) 2024 (realizované v InfluxQL):
+
 ```sql
 SELECT misto_cinu FROM "361/2000-125c-1" WHERE pismeno='f' AND (bod='2' OR bod='3' OR bod='4') AND time > '2024-05-01 00:00:00' AND time < '2024-05-31 23:59:59'
 ```
 
-čo vráti výsledok:
+**Output:**
 
 ```
 2024-05-01T22:00:00Z na dálnici D1 v 366,9 km ve směru jízdy na Brno
@@ -191,7 +210,7 @@ Prípadne nás môže zaujímať celkový počet prípadov prerušenia pravidiel
 SELECT count(cislo_pripadu) FROM "361/2000-125c-1" WHERE time > '2023-08-01' GROUP BY time(4w)
 ```
 
-s výsledkom:
+**Output:**
 
 ```
 2023-07-06T00:00:00Z 0
