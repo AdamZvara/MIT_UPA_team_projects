@@ -11,7 +11,7 @@ https://data.gov.cz/datov%C3%A1-sada?iri=https%3A%2F%2Fdata.gov.cz%2Fzdroj%2Fdat
 <br>
 **Druh databáze:** neo4j
 <br>
-**Pro úplnost zde uvádím data tak, jak jsem je získala z Wikipedie:** V souboru `lines.txt` je seznam linek
+**Pro úplnost zde uvádíme data tak, jak jsme je získali z Wikipedie:** V souboru `lines.txt` je seznam linek
 
 Pro grafové databáze se hodí především data, nad kterými chceme provádět grafové algoritmy. V případě našich dat
 se jedná o přirozenou reprezentaci vztahů mezi zastávkami a existujícími spoji. Neo4j má implementováno mnoho
@@ -20,8 +20,7 @@ dvěma
 zastávkami.
 
 Databáze bude využita pro analýzu cestování v rámci města Ostravy, konkrétně pro zjištění existujících spojení mezi
-zastávkami.
-Vzhledem ke grafové povaze tohoto problému je grafová databáze ideálním řešením.
+zastávkami. Vzhledem ke grafové povaze tohoto problému je grafová databáze ideálním řešením.
 
 Data jsou v nestrojově čitelné podobě, proto je nutné je nejprve zpracovat. K tomuto účelu jsme
 vytvořili Python script (přiložený ve složce graphdb), který data převedl do podoby Cypher scriptu pro import do
@@ -33,10 +32,10 @@ datových sadách údaje o jízdních řádech ani o časech potřebných pro p�
 nevytvářeli vážené hrany mezi zastávkami pro realističtější vyhledávání.
 
 Hlavní komplikací byla kvalita dat od Dopravního podniku Ostrava. Některé existující zastávky v datové sadě chyběly.
-Vyskytovaly se také inconsistence v názvech zastávek (například odlišné názvy stejné zastávky pro tramvaje a autobusy -
+Vyskytovaly se také inkonzistence v názvech zastávek (například odlišné názvy stejné zastávky pro tramvaje a autobusy -
 různé mezery, zkrácené či nezkrácené varianty) a nesoulady mezi názvy v jízdních řádech a datovou sadou (ověřeno z více
-zdrojů).
-Problematické bylo i označení některých zastávek jako tramvajových, přestože jimi ve skutečnosti nejsou. Bylo nezbytné
+zdrojů). Problematické bylo i označení některých zastávek jako pouze autobusových, přestože ve skutečnosti jsou i
+tramvajové. Bylo nezbytné
 data manuálně vyčistit a doplnit, což byl časově náročný proces.
 
 **Postup pro vložení dat do neo4j databáze je následující:**
@@ -70,21 +69,18 @@ UNWIND
 {name: 'Kunčičky,kostel',location: point({longitude: 18.30481100852727, latitude: 18.30481100852727}), wheelchair_accessible: False}
 ] AS stop
 
-        CREATE
+CREATE
 (s:Stop {
-            name: stop.name,
-            location: point({longitude: stop.longitude, latitude: stop.latitude}),
-            wheelchair_accessible: stop.wheelchair_accessible
-                }
-                )
-            WITH s
-            RETURN count(*);
+    name: stop.name,
+    location: point({longitude: stop.longitude, latitude: stop.latitude}),
+    wheelchair_accessible: stop.wheelchair_accessible
+}
+)
+WITH s
+RETURN count(*);
             
-        
-       
 /* Create route 1 and its connections */
-// Create
-connections for route 1
+// Create connections for route 1
 MATCH (s0:Stop {name: 'Hlavní nádraží'})
 MATCH (s1:Stop {name: 'Náměstí S.Čecha'})
 MATCH (s2:Stop {name: 'Muglinovská'})
@@ -112,16 +108,14 @@ CREATE
 (s0)-[:ROUTE]->(s1),
 (s1)-[:ROUTE]->(s0),
 (s1)-[:ROUTE]->(s2),
-/* ... Ostaní zastávky... */
+/* ... Ostatní zastávky... */
 (s21)-[:ROUTE]->(s20),
 (s21)-[:ROUTE]->(s22),
 (s22)-[:ROUTE]->(s21);
-       
 
 /**
  * Tímto způsobem jsme vytvořil celou grafovou strukturu.
  */
-
 ```
 
 Výsledek je takový graf:
@@ -222,8 +216,7 @@ rychlé vkládání hodnot a jejich čtení podle předem definovaných vzorců.
 
 Klíčovou vlastností je jednoduché a průběžně rozšiřitelné škálování, které zajišťuje maximální výkon i
 redundanci. Tu lze nastavit pomocí parametru replikace dat. Díky těmto vlastnostem Cassandra vyniká při pravidelném
-přidávání
-velkého množství záznamů v porovnání s tradičními relačními databázemi.
+přidávání velkého množství záznamů v porovnání s tradičními relačními databázemi
 
 Další předností sloupcových wide-column databází je možnost jednoduchého lineárního škálování. K výhodám patří také
 distribuovanost, vysoká dostupnost a odolnost proti výpadku díky distribuci dat mezi více uzly.
@@ -278,7 +271,7 @@ WITH replication = {
 
 USE traffic_monitoring;
 
--- Hlavní tabulka s jednoduchovou strukturou
+-- Hlavní tabulka s jednoduchou strukturou
 CREATE TABLE IF NOT EXISTS traffic_measurements (
     datum timestamp,
     stanice text,
@@ -293,7 +286,6 @@ FROM '/shared_data/Statistika-poctu-prujezdu-2024.csv'
 WITH HEADER = TRUE
 AND DELIMITER = ','
 AND DATETIMEFORMAT = '%d.%m.%Y %H:%M';
-  
 ```
     
 [//]: <> (@formatter:on)
@@ -305,7 +297,6 @@ Starting copy of traffic_monitoring.traffic_measurements with columns [datum, st
 Processed: 22386 rows; Rate:   17053 rows/s; Avg. rate:   31068 rows/s
 22386 rows imported from 1 files in 0.721 seconds (0 skipped).
 ```
-
 ## Ukázka dotazu
 
 Hlavní výhoda této databáze je možnost jednoduchého přidávání uzlů do klastru (Horizontální škálování). S tímto souvisí
