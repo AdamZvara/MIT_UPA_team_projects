@@ -26,8 +26,7 @@ Největším problémem byla data od Dopravního podniku Ostrava. Opakovaně se 
 když prokazatelně existují. Časté byly i nesoulady mezi názvy zastávek (např. zastávka pro tramvaje měla jiné
 jméno než zastávka pro autobusy -- jiné mezery, zkrácené-nezkrácené texty apod.) nebo nesoulady mezi jmény v jízdních
 řádech a datovou sadou (ověřeno z několika zdrojů). Nebo to, že ne všechny tramvajové zastávky jsou tramvajové. Data bylo
-tedy potřeba projít a ručně vyčistit a doplnit, což
-zabralo hodně času.
+tedy potřeba projít a ručně vyčistit a doplnit, což zabralo hodně času.
 
 **Postup pro vložení dat do neo4j databáze je následující:**
 
@@ -159,19 +158,13 @@ RETURN path
 │vé Výškovice"})<-[:ROUTE]-(:Stop {wheelchair_accessible: true,name: "V│
 │ýškovice"})                                                           │
 └──────────────────────────────────────────────────────────────────────┘
-MAX COLUMN WIDTH:
-
-
-
-
-
 ```
 
 
 
 ### Oktužní jidza přes 3 vybrané zastávky
 
-Jsou specifikovány 3 zastávy a jejich pořadí ve kterém se musí projet a následně se vrátit zpět na první.
+Zadány jsou tři zastávky a jejich pořadí průjezdu s návratem do výchozí zastávky.
 
 ```sql
 MATCH (s1:Stop {name: 'Hlavní nádraží'}),
@@ -189,7 +182,7 @@ RETURN p1, p2, p3,
 
 **Výstup:**
 
-Výsledkem je tabulka, která obsahuje jednotlivé cesty mezi zastávkami a celkovou délku cesty. Vzhledem k omezenému místo
+Výsledkem je tabulka, která obsahuje jednotlivé cesty mezi zastávkami a celkovou délku cesty. Vzhledem k omezenému místu
 zde ukazujeme pouze poslední sloupec.
 
 ```text
@@ -209,39 +202,36 @@ zde ukazujeme pouze poslední sloupec.
 <br>**Distribuce:** CSV<br>
 **Druh databáze:** Cassandra<br>
 
-Data vhodná do wide-column databáze jsou taková, která se nebudou často modifikovat, ale budou často čtena, nebo
-data, která mají velký počet záznamů. Dále je výhodné, pokud se data málo nebo vůbec nemění, nebo pokud je klíčové
-rychlé vkládání hodnot a jejich čtení podle konkrétně známého vzorce.
+Data vhodná pro wide-column databáze jsou taková, která se minimálně modifikují, ale často se z nich čte, nebo
+data s velkým počtem záznamů. Výhodné je také, pokud jsou data statická nebo se téměř nemění, případně když je prioritou
+rychlé vkládání hodnot a jejich čtení podle předem definovaných vzorců.
 
-Klíčovou vlastností je jednoduché a průběžně aktualizovatelné škálování, což zajistí jak maximální výkon, tak i
-redundanci,
-kterou je možné nastavit pomocí parametru replikace dat. I díky tomu Cassandra exceluje při pravidelném přidávání
-velkého
-množství záznamů v porovnání s tradičními relačními databázemi.
+Klíčovou vlastností je jednoduché a průběžně rozšiřitelné škálování, které zajišťuje maximální výkon i
+redundanci. Tu lze nastavit pomocí parametru replikace dat. Díky těmto vlastnostem Cassandra vyniká při pravidelném přidávání
+velkého množství záznamů v porovnání s tradičními relačními databázemi.
 
-Další výhodou sloupcových wide-column databází je možnost jednoduchého lineárního škálování. Mezi další výhody patří
-distribuovanost, vysoká dostupnost a odolnost proti výpadku v
-důsledku distribuce dat mezi více uzly.
+Další předností sloupcových wide-column databází je možnost jednoduchého lineárního škálování. K výhodám patří také
+distribuovanost, vysoká dostupnost a odolnost proti výpadku díky distribuci dat mezi více uzly.
 
-Další významnou výhodou je škálovatelnost Cassandry. S rostoucím počtem měřicích stanic a objemem historických dat
-můžeme jednoduše přidávat další nodes do clusteru. Partition key založený na časovém razítku zajišťuje rovnoměrnou
-distribuci dat napříč clustery, což je kritické pro dlouhodobou udržitelnost systému. MongoDB nebo Redis by v tomto
-ohledu mohly představovat problém - MongoDB kvůli složitějšímu škálování zápisů, Redis kvůli své primárně in-memory
-povaze, která by byla pro historická data nákladná.
+Významným benefitem je škálovatelnost Cassandry. S narůstajícím počtem měřicích stanic a objemem historických dat
+lze snadno přidávat další uzly do clusteru. Partition key založený na časovém razítku zajišťuje rovnoměrnou
+distribuci dat napříč clustery, což je zásadní pro dlouhodobou udržitelnost systému. MongoDB nebo Redis by v tomto
+případě mohly být problematické - MongoDB kvůli komplexnějšímu škálování zápisů, Redis kvůli své primárně in-memory
+architektuře, která by byla pro historická data nákladná.
 
-Databáze Cassandra nabízí i TTL (Time to live) mechanismus, což umožňuje automatickou expiraci dat a jejich
-agregaci pro zachování informace, ale šetření místa.
+Databáze Cassandra nabízí také TTL (Time to live) mechanismus, který umožňuje automatickou expiraci dat a jejich
+agregaci pro zachování informace při současné úspoře místa.
 
-Zvolený dataset obsahuje přes 22 tisíc záznamů. Dá se předpokládat, že tato data se prakticky nebudou měnit. Data budou
-kontinuálně růst (append only). Data obsahují informace indexované datem a časem, což je takřka vhodné pro tyto typy
-databází. Data také musí mít pevnou strukturu a neobsahují prázdné hodnoty. Data neobsahují žádné relační vztahy. Tato
-data jsou vhodná pro sloupcové databáze. Předpokládá se hledání podle data a stanice, což je vhodné pro sloupcové
-databáze.
+Zvolený dataset obsahuje přes 22 tisíc záznamů. Předpokládáme, že tato data se prakticky nebudou měnit. Data budou
+pouze narůstat (append only). Data obsahují informace indexované datem a časem, což je ideální pro tento typ
+databází. Data mají pevnou strukturu a neobsahují prázdné hodnoty ani relační vztahy. Tato
+data jsou vhodná pro sloupcové databáze. Předpokládané vyhledávání podle data a stanice odpovídá možnostem sloupcových
+databází.
 
-Způsob dotazování těchto dat také hraje významnou roli v rozhodnutí pro Cassandru. Většina dotazů bude směřovat na
-konkrétní časové období nebo konkrétní měřicí stanici v daném čase. Cassandra tento pattern podporuje prostřednictvím
+Způsob dotazování těchto dat je dalším důvodem pro volbu Cassandry. Většina dotazů bude směřovat na
+konkrétní časové období nebo konkrétní měřicí stanici v daném čase. Cassandra tento vzor podporuje prostřednictvím
 své partition key (v našem případě datum) a clustering key (stanice). Díky tomu jsou dotazy na konkrétní časový úsek
-extrémně efektivní, protože Cassandra přesně ví, kde data najít, bez nutnosti procházet celou databázi.
+vysoce efektivní, protože Cassandra dokáže přesně lokalizovat data bez nutnosti procházet celou databázi.
 
 __Data jsou strukturována následovně:__
 
@@ -250,17 +240,17 @@ __Data jsou strukturována následovně:__
 - Typ vozidla (trida_objektu): Kategorické rozlišení (Velké/Ostatní)
 - Počet průjezdů (pocet): Numerická hodnota
 
-Pro konkrétní případ našich dat je také významné, že Cassandra umožňuje efektivní implementaci materialized views (je
-potřeba povolit v konfiguraci databáze).
-Čímž se dá do značné míry vyřešit nevýhoda sloupcových databází, kdy pokud je vytvořen složitější dotaz, tak je potřeba
-přidat za dotaz `ALLOW FILTERING`, což znamená, že dotaz bude neefektivní a budou se procházet všechna data a pro každý
-řádek bude zkontrolována podmínka. Materialized views umožňují si tyto dotazy předpočítat a ukládat do databáze.
+Pro náš konkrétní případ je významné, že Cassandra umožňuje efektivní implementaci materialized views (je
+nutné povolit v konfiguraci databáze).
+Tím lze výrazně eliminovat nevýhodu sloupcových databází, kdy při vytvoření složitějšího dotazu je nutné
+přidat za dotaz `ALLOW FILTERING`, což vede k neefektivnímu procházení všech dat s kontrolou podmínky pro každý
+řádek. Materialized views umožňují tyto dotazy předpočítat a uložit do databáze.
 
 ## Vložení dat a definice schématu
 
-Tato datová sada je distribuována pouze jako CSV. Pro vložení dat do databáze je třeba pouze vytvořit namespace,
-definovat tabulku a data vložit přímo funkcí `COPY` v `cqlsh`. Lze vkládat z CSV souboru. Není potřeba
-algoritmicky nic provádět.
+Tato datová sada je dostupná pouze jako CSV. Pro vložení dat do databáze stačí vytvořit namespace,
+definovat tabulku a data importovat přímo funkcí `COPY` v `cqlsh`. Lze importovat přímo z CSV souboru bez nutnosti
+další algoritmické úpravy.
 
 [//]: <> (@formatter:off)
 
