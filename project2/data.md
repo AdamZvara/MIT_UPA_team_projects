@@ -1,386 +1,249 @@
-# Projekt, 2. část: ukládání rozsáhlých dat v NoSQL databázích (zadání, požadavky; Rychlý)
+# Projekt, 2. část: ukládání rozsáhlých dat v NoSQL databázích
 
 Autoři: Jakub Vlk (xvlkja07), Adam Zvara (xzvara01)
 
-# Databáze neo4j
+# Databáze neo4j - grafová databáze
 
-**Název:** Zastávky MHD v Statutární město Ostrava
-**Odkazy:
-** https://data.gov.cz/datov%C3%A1-sada?iri=https%3A%2F%2Fdata.gov.cz%2Fzdroj%2Fdatov%C3%A9-sady%2F00845451%2F37085532
+**Název:** Zastávky MHD ve Statutárním městě Ostrava
+**Odkazy:**
+https://data.gov.cz/datov%C3%A1-sada?iri=https%3A%2F%2Fdata.gov.cz%2Fzdroj%2Fdatov%C3%A9-sady%2F00845451%2F37085532
 <br>**Distribuce:** GeoJSON<br>
 **Druh databáze:** neo4j<br>
-**Pro uplnost zde uvadím, data tak jak jsem je získla z wikipedie:**
+**Pro úplnost zde uvádím data tak, jak jsem je získala z Wikipedie:** V souboru `lines.txt` je seznam linek
 
-1) Hlavní nádraží – Náměstí Svatopluka Čecha – Muglinovská – Křižíkova – Důl Jindřich – Stodolní – Elektra – Karolina –
-   Náměstí Republiky – Don Bosco – Dolní Vítkovice Hlubina – Dolní Vítkovice – Český dům – Důl Jeremenko – Kolonie
-   Jeremenko – Moravská – Dřevoprodej – Hrabůvka, kostel – Hrabůvka, Poliklinika – Josefa Kotase – Antonína Poledníka –
-   Václava Jiřikovského – Dubina
-2) Hlavní nádraží – Náměstí Svatopluka Čecha – Muglinovská – Křižíkova – Důl Jindřich – Stodolní – Elektra – Karolina –
-   Náměstí Republiky – Don Bosco – Dolní Vítkovice Hlubina – Dolní Vítkovice – Vítkovice, Mírové náměstí – Stará
-   ocelárna – Ředitelství Vítkovic – SPORT ARÉNA – Karpatská – Horymírova – Zábřeh, OC – Zábřeh, vodárna – Kotva – Kino
-   Luna – 29. dubna – Nové Výškovice – Výškovice
-3) Dubina – Václava Jiřikovského – Antonína Poledníka – Josefa Kotase – Náměstí Ostrava-Jih – ÚMOb Jih – Rodinná –
-   Tylova – Dolní – Palkovského – Ředitelství Vítkovic – Stará ocelárna – Vítkovice,Mírové náměstí – Pohraniční –
-   Vagonka – Mariánské náměstí – Prostorná – Hulváky – Nová ves,vodárna – Svinov,mosty – Třebovice,OC – Třebovická –
-   Telekom. škola – Poruba,vozovna
-4) Nová huť již.brána – Nová huť hl.brána – Nová huť učiliště – Vratimovská – Kunčičky,kostel – Osada Míru –
-   Teplotechna – Hranečník – Důl Zárubek – U Hradu (x) – Výstaviště – Karolina – Náměstí Republiky – Krajský úřad – Dům
-   energetiky – Mariánské náměstí – Prostorná Hulváky – Nová Ves,vodárna – Svinov,mosty – Třebovice OC – Třebovická –
-   Sokolovská – Čistírny – Bedřicha Nikodéma – Dílny DP Ostrava – Martinov
-5) Budišovice,Zátiší – Horní Lhota – Dolní Lhota,osada – Dolní Lhota – Dolní Lhota,U Obory – Krásné Pole – Vřesina,Nová
-   Plzeň – Vřesina – Poruba,koupaliště – Poruba,Vřesinská
-6) Mor. Ostrava.Plynárny – Důl Jindřich – Stodolní – Elektra – Karolina – Náměstí Republiky – Don Bosco – Dolní
-   Vítkovice – Český dům – Důl Jeremenko – Kolonie Jeremenko – Nádraží Vítkovice – Rodinná – Kpt.Vajdy – Rodimcevova –
-   Zábřeh,vodárna – Kotva – Kino Luna – 29. dubna – Nové Výškovice – Výškovice
-7) Výškovice – Nové Výškovice – 29. dubna – Kino Luna – Kotva – Zábřeh,vodárna – Zábřeh,OC – Horymírova – Karpatská –
-   SPORT ARÉNA – Palkovského – Hulvácká – Ferona – Střelnice – Nová Ves,vodárna – Nová Ves.vodárna – Svinov,mosty –
-   Třebovice,OC – Třebovická – Telekom.škola – (Poruba,vozovna) – Rektorát VŠB – Hlavní třída – Fakultní nemocnice –
-   Poruba,Vřesinská
-8) '(Přívoz,Hlučínská – Důl Odra, Sad B.Němcové)' – Hlavní nádraží – Náměstí S. Čecha – Muglinovská – Křižíkova – (Mor.
-   Ostrava,Plynárny) – Důl Jindřich – Stodolní – Elektra – Karolina – Náměstí Republiky – Krajský úřad – Dům
-   energetiky – Mariánské náměstí – Prostorná – Hulváky – Nová Ves,vodárna – Svinov,mosty – Třebovice,OC – Třebovická –
-   Telekom.škola – Poruba,vozovna – Rektorát VŠB – Hlavní třída – Fakultní nemocnice – Poruba,Vřesinská
-10) Hranečník – Výstaviště – Karolina – Náměstí Republiky – Don Bosco – Dolní Vítkovice Hlubina – Dolní Vítkovice – Důl
-    Jeremenko – Dřevoprodej – Hrabůvka,kostel – Hrabůvka,Poliklinika – Josefa Kotase – Antonína Poledníka – Václava
-    Jiřikovského – Dubina
-11) Poruba,vozovna – Telekom. škola – Třebovická – Třebovice,OC – Svinov,mosty – Nová ves,vodárna – Střelnice – Ferona –
-    Hulvácká – Palkovského – SPORT ARÉNA – Městský stadion – Most Čs. armády – Nádraží Vítkovice – Rodinná – Kpt.
-    Vajdy – Rodimcevova – Zábřeh, vodárna – Kotva – Kino Luna – Svornosti – Zábřeh
-12) Hranečník – Důl Zárubek – Výstaviště – Karolina – Náměstí Republiky – Krajský úřad – Dům energetiky – Mariánské
-    náměstí – Vagonka – Pohraniční – Vítkovice,Mírové náměstí – Stará ocelárna – Ředitel.Vítkovic – SPORT ARÉNA –
-    Městský stadion – Most Čs. armády – Provaznická – Hrabůvka, kostel – Hrabůvka, Poliklinika – Josefa Kotase –
-    Antonína Poledníka – Václava Jiřikovského – Dubina
-14) Přívoz,Hlučínská – Důl Odra – Sad B.Němcové – Muglinovská – Křižíkova – Důl Jindřich – Stodolní – Elektra –
-    Výstaviště – Hranečník – Osada Míru – Vratimovská – Nová huť učiliště – Nová huť hl.brána – Nová huť již.brána
-15) Dubina – Václava Jiřikovského – Antonína Poledníka – Josefa Kotase – Náměstí Ostrava-Jih – ÚMOb Jih – Rodinná –
-    Kpt.Vajdy – Rodimcevova – Zábřeh vodárna – Kotva – Kino Luna – 29. dubna – Nové Výškovice – Výškovice
-16) Výstaviště – Náměstí Republiky – Dům kultury Vítkovic – Dům energetiky – Náměstí K. Marxe – Prostorná – Hulváky
-    koupaliště – Nová Ves vodárna – U koupaliště – Bedřiška – Hulvácká – Zábřeh nemocnice – Stadión TJ Vítkovice – Most
-    Československé Armády – Nádraží OV. Vítkovice – Horní – Nemocnice NHKG – Rodimcevova – Zábřeh vodárna – Čujkovova –
-    Volgogradská – Ul. 29. dubna – Nové Výškovice – Výškovice smyčka
-17) (Poruba, Vřesinská) – Fakultní nemocnice – Hlavní třída – VŠB-TUO – Poruba,vozovna – Telekom.škola – Třebovická –
-    Třebovice, OC – Svinov,mosty – Nová Ves,vodárna – Nová Ves,vodárna – Střelnice – Ferona – Hulvácká – Dolní –
-    Tylova – Rodinná – ÚMOb Jih – Náměstí Ostrava-Jih – Josefa Kotase – Antonína Poledníka – Václava Jiříkovského –
-    Dubina
-18) Dubina – Václava Jiřikovského – Antonína Poledníka – Josefa Kotase – Náměstí Ostrava-Jih – ÚMOb Jih – Rodinná –
-    Tylova – Dolní – Hulvácká – Ferona – Střelnice – Nová Ves,vodárna – Hulváky – Prostorná – Daliborova – Mariánské
-    náměstí – Dům energetiky – Krajský úřad – Náměstí Republiky – Karolina – Elektra – Stodolní – Důl Jindřich –
-    Křižíkova – Muglinovská – Náměstí S.Čecha – Hlavní nádraží
-19) Martinov – Dílny DP Ostrava – Bedřicha Nikodéma – Čistírny – Sokolovská – Třebovická – Třebovice,OC – Svinov,mosty –
-    Nová Ves,vodárna – Střelnice – Ferona – Hulvácká – Dolní – Tylova – Rodinná – ÚMOb Jih – Náměstí Ostrava-Jih –
-    Josefa Kotase – Antonína Poledníka – Václava Jiřikovského – Dubina
-
-Pro grafové databáze se hodí především takové data nad kterémi chceme provádět grafové algortmiy. V případě našich dat
-se jedná o přirozenou reprezetaci vztahů o existenci cest mezi zastávky. Neo4j má sobě implementováno spoustu grafových
+Pro grafové databáze se hodí především taková data, nad kterými chceme provádět grafové algoritmy. V případě našich dat
+se jedná o přirozenou reprezentaci vztahů o existenci cest mezi zastávkami. Neo4j má v sobě implementováno spoustu grafových
 algoritmů, které můžeme využít pro analýzu dat. Díky tomu můžeme snadno zjistit například nejkratší cestu mezi dvěma
-zastávkami. 
+zastávkami.
+
+Předpokládá se využití databáze pro analýzu cestování v rámci města Ostravy. To znamená, jaké cesty existují mezi dvěma
+zastávkami. Tento problém je zjevně grafový, a proto se pro něj výborně hodí grafová databáze.
+
+Vzhledem k tomu, že data jsou v nestrojově zpracované podobě, je třeba je nejprve zpracovat. Pro zpracování dat jsme
+použili Python script, který data zpracoval a vytvořil přímo Cypher script pro vložení dat do neo4j databáze.
+
+Největším problémem byla data od Dopravního podniku Ostrava. Opakovaně se stalo, že některé zastávky nebyly v datech, i
+když prokazatelně existují. Časté byly i nesoulady mezi názvy zastávek (např. zastávka pro tramvaje měla jiné
+jméno než zastávka pro autobusy -- jiné mezery, zkrácené-nezkrácené texty apod.) nebo nesoulady mezi jmény v jízdních
+řádech a datovou sadou (ověřeno z několika zdrojů). Nebo to, že ne všechny tramvajové zastávky jsou tramvajové. Data bylo
+tedy potřeba projít a ručně vyčistit a doplnit, což
+zabralo hodně času.
+
+**Postup pro vložení dat do neo4j databáze je následující:**
+
+1. Parsování dat z Wikipedie
+    - Pouze rozdělení jednotlivých zastávek díky `-` a následné odstranění zbytečných znaků (mezer, tabulátorů).
+2. Propojení dat z Wikipedie a z dat Dopravního podniku Ostrava
+    - Ruční kontrola a doplnění chybějících zastávek
+    - Ruční kontrola a oprava názvů zastávek
+    - Propojení dat z Wikipedie a z dat Dopravního podniku Ostrava
+3. Vytvoření zastávek
+    - Pro každou zastávku vytvořit nový uzel s názvem zastávky, souřadnicemi a informací o tom, zda je přístupná pro
+      vozíčkáře.
+4. Propojení všech zastávek hranou, pokud existuje cesta mezi nimi (oběma směry, aby byl graf neorientovaný).
 
 ## Vložení a definice schématu
 
-Pochopitelně jsem tento script nenapsali ručně, ale využili jsme nástroj, který nám tento script vygeneroval. Celý
-script je možné najít v souboru nakonci. Zde je ukázka toho, jak vypadá vložení zastávek a první linky.
-
 ```sql
-// Create
-all stops
-UNWIND [
-    '29. dubna',
-    'Antonína Poledníka',
-    'Bedřicha Nikodéma',
-    'Bedřiška',
-    'Budišovice,Zátiší',
-    'Daliborova',
-    'Dolní',
-    'Dolní Lhota',
-    'Dolní Lhota,U Obory',
-    'Dolní Lhota,osada',
-    'Dolní Vítkovice',
-    'Dolní Vítkovice Hlubina',
-    'Don Bosco',
-    'Dubina',
-    'Dílny DP Ostrava',
-    'Dřevoprodej',
-    'Důl Jeremenko',
-    'Důl Jindřich',
-    'Důl Odra',
-    'Důl Zárubek',
-    'Dům energetiky',
-    'Dům kultury Vítkovic',
-    'Elektra',
-    'Fakultní nemocnice',
-    'Ferona',
-    'Hlavní nádraží',
-    'Hlavní třída',
-    'Horní',
-    'Horní Lhota',
-    'Horymírova',
-    'Hrabůvka, Poliklinika',
-    'Hrabůvka, kostel',
-    'Hrabůvka,Poliklinika',
-    'Hrabůvka,kostel',
-    'Hranečník',
-    'Hulvácká',
-    'Hulváky',
-    'Hulváky koupaliště',
-    'Josefa Kotase',
-    'Karolina',
-    'Karpatská',
-    'Kino Luna',
-    'Kolonie Jeremenko',
-    'Kotva',
-    'Kpt. Vajdy',
-    'Kpt.Vajdy',
-    'Krajský úřad',
-    'Krásné Pole',
-    'Kunčičky,kostel',
-    'Křižíkova',
-    'Mariánské náměstí',
-    'Martinov',
-    'Mor. Ostrava.Plynárny',
-    'Moravská',
-    'Most Československé Armády',
-    'Most Čs. armády',
-    'Muglinovská',
-    'Městský stadion',
-    'Nemocnice NHKG',
-    'Nová Ves vodárna',
-    'Nová Ves,vodárna',
-    'Nová Ves.vodárna',
-    'Nová huť hl.brána',
-    'Nová huť již.brána',
-    'Nová huť učiliště',
-    'Nová ves,vodárna',
-    'Nové Výškovice',
-    'Nádraží OV. Vítkovice',
-    'Nádraží Vítkovice',
-    'Náměstí K. Marxe',
-    'Náměstí Ostrava-Jih',
-    'Náměstí Republiky',
-    'Náměstí S. Čecha',
-    'Náměstí S.Čecha',
-    'Náměstí Svatopluka Čecha',
-    'Osada Míru',
-    'Palkovského',
-    'Pohraniční',
-    'Poruba,Vřesinská',
-    'Poruba,koupaliště',
-    'Poruba,vozovna',
-    'Prostorná',
-    'Prostorná Hulváky',
-    'Provaznická',
-    'Přívoz,Hlučínská',
-    'Rektorát VŠB',
-    'Rodimcevova',
-    'Rodinná',
-    'SPORT ARÉNA',
-    'Sad B.Němcové',
-    'Sokolovská',
-    'Stadión TJ Vítkovice',
-    'Stará ocelárna',
-    'Stodolní',
-    'Střelnice',
-    'Svinov,mosty',
-    'Svornosti',
-    'Telekom. škola',
-    'Telekom.škola',
-    'Teplotechna',
-    'Tylova',
-    'Třebovice OC',
-    'Třebovice, OC',
-    'Třebovice,OC',
-    'Třebovická',
-    'U Hradu',
-    'U koupaliště',
-    'Ul. 29. dubna',
-    'Vagonka',
-    'Volgogradská',
-    'Vratimovská',
-    'Václava Jiřikovského',
-    'Václava Jiříkovského',
-    'Vítkovice, Mírové náměstí',
-    'Vítkovice,Mírové náměstí',
-    'Výstaviště',
-    'Výškovice',
-    'Výškovice smyčka',
-    'Vřesina',
-    'Vřesina,Nová Plzeň',
-    'VŠB-TUO',
-    'Zábřeh',
-    'Zábřeh nemocnice',
-    'Zábřeh vodárna',
-    'Zábřeh, OC',
-    'Zábřeh, vodárna',
-    'Zábřeh,OC',
-    'Zábřeh,vodárna',
-    'ÚMOb Jih',
-    'Český dům',
-    'Čistírny',
-    'Čujkovova',
-    'Ředitel.Vítkovic',
-    'Ředitelství Vítkovic'
-] AS stopName
+/* Create all stops */
 CREATE
-(s:Stop {name: stopName});
+CONSTRAINT stop_name IF NOT EXISTS FOR (s:Stop) REQUIRE s.name IS UNIQUE;
 
+UNWIND
+[
+ {name: 'Hlavní nádraží',location: point({longitude: 18.268441009548248, latitude: 18.268441009548248}), wheelchair_accessible: False},
+{name: 'Náměstí S.Čecha',location: point({longitude: 18.272677009208753, latitude: 18.272677009208753}), wheelchair_accessible: False},
+{name: 'Muglinovská',location: point({longitude: 18.278012008641852, latitude: 18.278012008641852}), wheelchair_accessible: True},
+       /* ... Ostaní zastávky... */
+{name: 'U Hradu',location: point({longitude: 18.296669009450927, latitude: 18.296669009450927}), wheelchair_accessible: True},
+{name: 'Daliborova',location: point({longitude: 18.254088009084025, latitude: 18.254088009084025}), wheelchair_accessible: False},
+{name: 'Kunčičky,kostel',location: point({longitude: 18.30481100852727, latitude: 18.30481100852727}), wheelchair_accessible: False}
+] AS stop
+
+        CREATE
+(s:Stop {
+            name: stop.name,
+            location: point({longitude: stop.longitude, latitude: stop.latitude}),
+            wheelchair_accessible: stop.wheelchair_accessible
+                }
+                )
+            WITH s
+            RETURN count(*);
+            
+        
+       
+/* Create route 1 and its connections */
 // Create
-route 1 and its connections
-MERGE (l1:Line {number: '1'})
-WITH l1
+connections for route 1
 MATCH (s0:Stop {name: 'Hlavní nádraží'})
-MATCH (s1:Stop {name: 'Náměstí Svatopluka Čecha'})
+MATCH (s1:Stop {name: 'Náměstí S.Čecha'})
+MATCH (s2:Stop {name: 'Muglinovská'})
+MATCH (s3:Stop {name: 'Křižíkova'})
+MATCH (s4:Stop {name: 'Důl Jindřich'})
+MATCH (s5:Stop {name: 'Stodolní'})
+MATCH (s6:Stop {name: 'Elektra'})
+MATCH (s7:Stop {name: 'Karolina'})
+MATCH (s8:Stop {name: 'Náměstí Republiky'})
+MATCH (s9:Stop {name: 'Don Bosco'})
+MATCH (s10:Stop {name: 'Dolní Vítkovice Hlubina'})
+MATCH (s11:Stop {name: 'Dolní Vítkovice'})
+MATCH (s12:Stop {name: 'Český dům'})
+MATCH (s13:Stop {name: 'Důl Jeremenko'})
+MATCH (s14:Stop {name: 'Kolonie Jeremenko'})
+MATCH (s15:Stop {name: 'Moravská'})
+MATCH (s16:Stop {name: 'Dřevoprodej'})
+MATCH (s17:Stop {name: 'Hrabůvka,kostel'})
+MATCH (s18:Stop {name: 'Hrabůvka,Poliklinika'})
+MATCH (s19:Stop {name: 'Josefa Kotase'})
+MATCH (s20:Stop {name: 'Antonína Poledníka'})
+MATCH (s21:Stop {name: 'Václava Jiřikovského'})
+MATCH (s22:Stop {name: 'Dubina'})
 CREATE
-(s0)-[:NEXT {line: l1.number, order: 1}]->(s1);
-WITH l1
-    MATCH (s1:Stop {name : 'Náměstí Svatopluka Čecha'})
-    MATCH (s2:Stop {name : 'Muglinovská'})
-CREATE
-(s1)-[:NEXT {line: l1.number, order: 2}]->(s2);
-WITH l1
-    MATCH (s2:Stop {name : 'Muglinovská'})
-    MATCH (s3:Stop {name : 'Křižíkova'})
-CREATE
-(s2)-[:NEXT {line: l1.number, order: 3}]->(s3);
-WITH l1
-    MATCH (s3:Stop {name : 'Křižíkova'})
-    MATCH (s4:Stop {name : 'Důl Jindřich'})
-CREATE
-(s3)-[:NEXT {line: l1.number, order: 4}]->(s4);
-WITH l1
-    MATCH (s4:Stop {name : 'Důl Jindřich'})
-    MATCH (s5:Stop {name : 'Stodolní'})
-CREATE
-(s4)-[:NEXT {line: l1.number, order: 5}]->(s5);
-WITH l1
-    MATCH (s5:Stop {name : 'Stodolní'})
-    MATCH (s6:Stop {name : 'Elektra'})
-CREATE
-(s5)-[:NEXT {line: l1.number, order: 6}]->(s6);
-WITH l1
-    MATCH (s6:Stop {name : 'Elektra'})
-    MATCH (s7:Stop {name : 'Karolina'})
-CREATE
-(s6)-[:NEXT {line: l1.number, order: 7}]->(s7);
-WITH l1
-    MATCH (s7:Stop {name : 'Karolina'})
-    MATCH (s8:Stop {name : 'Náměstí Republiky'})
-CREATE
-(s7)-[:NEXT {line: l1.number, order: 8}]->(s8);
-WITH l1
-    MATCH (s8:Stop {name : 'Náměstí Republiky'})
-    MATCH (s9:Stop {name : 'Don Bosco'})
-CREATE
-(s8)-[:NEXT {line: l1.number, order: 9}]->(s9);
-WITH l1
-    MATCH (s9:Stop {name : 'Don Bosco'})
-    MATCH (s10:Stop {name : 'Dolní Vítkovice Hlubina'})
-CREATE
-(s9)-[:NEXT {line: l1.number, order: 10}]->(s10);
-WITH l1
-    MATCH (s10:Stop {name : 'Dolní Vítkovice Hlubina'})
-    MATCH (s11:Stop {name : 'Dolní Vítkovice'})
-CREATE
-(s10)-[:NEXT {line: l1.number, order: 11}]->(s11);
-WITH l1
-    MATCH (s11:Stop {name : 'Dolní Vítkovice'})
-    MATCH (s12:Stop {name : 'Český dům'})
-CREATE
-(s11)-[:NEXT {line: l1.number, order: 12}]->(s12);
-WITH l1
-    MATCH (s12:Stop {name : 'Český dům'})
-    MATCH (s13:Stop {name : 'Důl Jeremenko'})
-CREATE
-(s12)-[:NEXT {line: l1.number, order: 13}]->(s13);
-WITH l1
-    MATCH (s13:Stop {name : 'Důl Jeremenko'})
-    MATCH (s14:Stop {name : 'Kolonie Jeremenko'})
-CREATE
-(s13)-[:NEXT {line: l1.number, order: 14}]->(s14);
-WITH l1
-    MATCH (s14:Stop {name : 'Kolonie Jeremenko'})
-    MATCH (s15:Stop {name : 'Moravská'})
-CREATE
-(s14)-[:NEXT {line: l1.number, order: 15}]->(s15);
-WITH l1
-    MATCH (s15:Stop {name : 'Moravská'})
-    MATCH (s16:Stop {name : 'Dřevoprodej'})
-CREATE
-(s15)-[:NEXT {line: l1.number, order: 16}]->(s16);
-WITH l1
-    MATCH (s16:Stop {name : 'Dřevoprodej'})
-    MATCH (s17:Stop {name : 'Hrabůvka, kostel'})
-CREATE
-(s16)-[:NEXT {line: l1.number, order: 17}]->(s17);
-WITH l1
-    MATCH (s17:Stop {name : 'Hrabůvka, kostel'})
-    MATCH (s18:Stop {name : 'Hrabůvka, Poliklinika'})
-CREATE
-(s17)-[:NEXT {line: l1.number, order: 18}]->(s18);
-WITH l1
-    MATCH (s18:Stop {name : 'Hrabůvka, Poliklinika'})
-    MATCH (s19:Stop {name : 'Josefa Kotase'})
-CREATE
-(s18)-[:NEXT {line: l1.number, order: 19}]->(s19);
-WITH l1
-    MATCH (s19:Stop {name : 'Josefa Kotase'})
-    MATCH (s20:Stop {name : 'Antonína Poledníka'})
-CREATE
-(s19)-[:NEXT {line: l1.number, order: 20}]->(s20);
-WITH l1
-    MATCH (s20:Stop {name : 'Antonína Poledníka'})
-    MATCH (s21:Stop {name : 'Václava Jiřikovského'})
-CREATE
-(s20)-[:NEXT {line: l1.number, order: 21}]->(s21);
-WITH l1
-    MATCH (s21:Stop {name : 'Václava Jiřikovského'})
-    MATCH (s22:Stop {name : 'Dubina'})
-CREATE
-(s21)-[:NEXT {line: l1.number, order: 22}]->(s22);
+(s0)-[:ROUTE]->(s1),
+(s1)-[:ROUTE]->(s0),
+(s1)-[:ROUTE]->(s2),
+/* ... Ostaní zastávky... */
+(s21)-[:ROUTE]->(s20),
+(s21)-[:ROUTE]->(s22),
+(s22)-[:ROUTE]->(s21);
+       
 /**
  * Tímto způsobem jsme vytvořil celou grafovou strukturu.
  */
+```
+
+Výsledek je takový graf:
+
+![Alt text]( graphdb/graph.svg )
+
+## Ukázka dotazu
+
+### Nejkratší cesta mezi dvěma zastávkami
+```sql
+MATCH (start:Stop {name: 'Poruba,koupaliště'}), 
+      (end:Stop {name: 'Osada Míru'}),
+      path = shortestPath((start)-[:ROUTE*]-(end))
+RETURN path
+```
+
+**Výsledek jak v textové tak grafické podobě.**
+
+![Alt text]( graphdb/graph_II.svg )
+
+
+```text
+╒══════════════════════════════════════════════════════════════════════╕
+│path                                                                  │
+╞══════════════════════════════════════════════════════════════════════╡
+│(:Stop {wheelchair_accessible: true,name: "Poruba,koupaliště"})-[:ROUT│
+│E]->(:Stop {wheelchair_accessible: true,name: "Poruba,Vřesinská"})-[:R│
+│OUTE]->(:Stop {wheelchair_accessible: true,name: "Fakultní nemocnice"}│
+│)<-[:ROUTE]-(:Stop {wheelchair_accessible: true,name: "Hlavní třída"})│
+│<-[:ROUTE]-(:Stop {wheelchair_accessible: true,name: "Rektorát VŠB"})-│
+│[:ROUTE]->(:Stop {wheelchair_accessible: true,name: "Telekom.škola"})<│
+│-[:ROUTE]-(:Stop {wheelchair_accessible: true,name: "Třebovická"})<-[:│
+│ROUTE]-(:Stop {wheelchair_accessible: true,name: "Svinov,mosty"})<-[:R│
+│OUTE]-(:Stop {wheelchair_accessible: true,name: "Nová Ves,vodárna"})<-│
+│[:ROUTE]-(:Stop {wheelchair_accessible: false,name: "Střelnice"})<-[:R│
+│OUTE]-(:Stop {wheelchair_accessible: false,name: "Ferona"})-[:ROUTE]->│
+│(:Stop {wheelchair_accessible: true,name: "Hulvácká"})-[:ROUTE]->(:Sto│
+│p {wheelchair_accessible: false,name: "Dolní"})-[:ROUTE]->(:Stop {whee│
+│lchair_accessible: false,name: "Tylova"})<-[:ROUTE]-(:Stop {wheelchair│
+│_accessible: true,name: "Rodinná"})-[:ROUTE]->(:Stop {wheelchair_acces│
+│sible: true,name: "Kpt.Vajdy"})<-[:ROUTE]-(:Stop {wheelchair_accessibl│
+│e: false,name: "Rodimcevova"})-[:ROUTE]->(:Stop {wheelchair_accessible│
+│: true,name: "Zábřeh,vodárna"})<-[:ROUTE]-(:Stop {wheelchair_accessibl│
+│e: true,name: "Kotva"})-[:ROUTE]->(:Stop {wheelchair_accessible: true,│
+│name: "Kino Luna"})<-[:ROUTE]-(:Stop {wheelchair_accessible: true,name│
+│: "29.dubna"})<-[:ROUTE]-(:Stop {wheelchair_accessible: true,name: "No│
+│vé Výškovice"})<-[:ROUTE]-(:Stop {wheelchair_accessible: true,name: "V│
+│ýškovice"})                                                           │
+└──────────────────────────────────────────────────────────────────────┘
+MAX COLUMN WIDTH:
+
+
+
+
 
 ```
 
-# Sloupcová wide-column databáze
+
+
+### Oktužní jidza přes 3 vybrané zastávky
+
+Jsou specifikovány 3 zastávy a jejich pořadí ve kterém se musí projet a následně se vrátit zpět na první.
+
+```sql
+MATCH (s1:Stop {name: 'Hlavní nádraží'}),
+      (s2:Stop {name: 'Karolina'}),
+      (s3:Stop {name: 'Dubina'}),
+      p1 = shortestPath((s1)-[:ROUTE*]-(s2)),
+      p2 = shortestPath((s2)-[:ROUTE*]-(s3)),
+      p3 = shortestPath((s3)-[:ROUTE*]-(s1))
+RETURN p1, p2, p3,
+       [node IN nodes(p1) | node.name] +
+       [node IN nodes(p2)[1..] | node.name] +
+       [node IN nodes(p3)[1..] | node.name] AS complete_route,
+       length(p1) + length(p2) + length(p3) AS total_length
+```
+
+**Výstup:**
+
+Výsledkem je tabulka, která obsahuje jednotlivé cesty mezi zastávkami a celkovou délku cesty. Vzhledem k omezenému místo
+zde ukazujeme pouze poslední sloupec.
+
+```text
+
+["Hlavní nádraží", "Náměstí S.Čecha", "Muglinovská", "Křižíkova", "Důl Jindřich", "Stodolní", "Elektra", "Karolina",
+ "Náměstí Republiky", "Don Bosco", "Dolní Vítkovice", "Důl Jeremenko", "Dřevoprodej", "Hrabůvka,kostel", "Hrabůvka,
+ Poliklinika", "Josefa Kotase", "Antonína Poledníka", "Dubina", "Antonína Poledníka", "Josefa Kotase", "Hrabůvka,
+ Poliklinika", "Hrabůvka,kostel", "Dřevoprodej", "Důl Jeremenko", "Dolní Vítkovice", "Don Bosco", "Náměstí Republiky",
+  "Karolina", "Elektra","Stodolní", "Důl Jindřich", "Křižíkova", "Muglinovská", "Náměstí S.Čecha", "Hlavní nádraží"]:34
+
+```
+
+# Databáze Cassandra - Sloupcová wide-column databáze
 
 **Název:** Statistika průjezdu vozidel ze sledovaných křižovatek v roce 2024
 **Odkazy:** https://opendata.ostrava.cz/soubory/MMOIT/doprava/Statistika-poctu-prujezdu-2024.csv
 <br>**Distribuce:** CSV<br>
 **Druh databáze:** Cassandra<br>
 
-Data vhodná do wide-column databáze jsou taková, která se nebudou často modifikovat, ale budou často čtena nebo pro
-data, která mají velký počet záznamů. Déle je výhodné pokud se data málo nebo vůbec mění a nebo pokud je klíčové
-rychlé vkládání hodnot a jejich čtení podle konrétně známého vzorce.
+Data vhodná do wide-column databáze jsou taková, která se nebudou často modifikovat, ale budou často čtena, nebo
+data, která mají velký počet záznamů. Dále je výhodné, pokud se data málo nebo vůbec nemění, nebo pokud je klíčové
+rychlé vkládání hodnot a jejich čtení podle konkrétně známého vzorce.
 
-Kličovou vlastností je jednodché a průběžně aktualizovatelné škálování, což zajistí jak maximální výkon tak i redudanci
-kterou je možné nastavit pomocí parametru replikace dat. I díky tomu cassandar exceluje při pravidelné přidávání velkého
+Klíčovou vlastností je jednoduché a průběžně aktualizovatelné škálování, což zajistí jak maximální výkon, tak i
+redundanci,
+kterou je možné nastavit pomocí parametru replikace dat. I díky tomu Cassandra exceluje při pravidelném přidávání
+velkého
 množství záznamů v porovnání s tradičními relačními databázemi.
 
-Další výhodou sloupcových wide-column databází je možnost jednoduhcého lineráního škálování. Mezi další výhodé patří
-distrubovanost, vysoká dostupnost a odolnost proti výpadku v
-důsledku distribuce data mezi více uzly.
+Další výhodou sloupcových wide-column databází je možnost jednoduchého lineárního škálování. Mezi další výhody patří
+distribuovanost, vysoká dostupnost a odolnost proti výpadku v
+důsledku distribuce dat mezi více uzly.
 
-Další významnou výhodou je škálovatelnost Cassandry. S rostoucím počtem měřících stanic a objemem historických dat
+Další významnou výhodou je škálovatelnost Cassandry. S rostoucím počtem měřicích stanic a objemem historických dat
 můžeme jednoduše přidávat další nodes do clusteru. Partition key založený na časovém razítku zajišťuje rovnoměrnou
 distribuci dat napříč clustery, což je kritické pro dlouhodobou udržitelnost systému. MongoDB nebo Redis by v tomto
 ohledu mohly představovat problém - MongoDB kvůli složitějšímu škálování zápisů, Redis kvůli své primárně in-memory
 povaze, která by byla pro historická data nákladná.
 
-Databáze casandra nabízí i TTL (Time to live) mechanismus, což umožnuje automatickou expiraci data a jejich a
+Databáze Cassandra nabízí i TTL (Time to live) mechanismus, což umožňuje automatickou expiraci dat a jejich
 agregaci pro zachování informace, ale šetření místa.
 
-Zvolený dataset obsahuje přes 22 tisíc záznamů. Dá se přepokládat že tyto data se prakticky nebudou měnit.Data budou
-kontiuálně růst (append only). Data obsahují informace indexované datumem a časem což je taktéř vhodné pro tyto typy
-databází. Data taktéž musí mít pevnou strukturu a neobsahují prázdné hodnoty. Data neobsahují žádné relační vztahy. Tato
-data jsou vhodná pro sloupcové databáze.Předpokládá se hledání podle data a stanice, což je vhodné pro sloupcové
+Zvolený dataset obsahuje přes 22 tisíc záznamů. Dá se předpokládat, že tato data se prakticky nebudou měnit. Data budou
+kontinuálně růst (append only). Data obsahují informace indexované datem a časem, což je takřka vhodné pro tyto typy
+databází. Data také musí mít pevnou strukturu a neobsahují prázdné hodnoty. Data neobsahují žádné relační vztahy. Tato
+data jsou vhodná pro sloupcové databáze. Předpokládá se hledání podle data a stanice, což je vhodné pro sloupcové
 databáze.
 
 Způsob dotazování těchto dat také hraje významnou roli v rozhodnutí pro Cassandru. Většina dotazů bude směřovat na
-konkrétní časové období nebo konkrétní měřící stanici v daném čase. Cassandra tento pattern podporuje prostřednictvím
+konkrétní časové období nebo konkrétní měřicí stanici v daném čase. Cassandra tento pattern podporuje prostřednictvím
 své partition key (v našem případě datum) a clustering key (stanice). Díky tomu jsou dotazy na konkrétní časový úsek
 extrémně efektivní, protože Cassandra přesně ví, kde data najít, bez nutnosti procházet celou databázi.
 
-__Data jsou struktoruováná následovně:__
+__Data jsou strukturována následovně:__
 
 - Časové razítko (datum): Primární identifikátor měření
 - Lokace (stanice): Textový identifikátor místa měření
@@ -389,16 +252,15 @@ __Data jsou struktoruováná následovně:__
 
 Pro konkrétní případ našich dat je také významné, že Cassandra umožňuje efektivní implementaci materialized views (je
 potřeba povolit v konfiguraci databáze).
-Čímž se dá do značné míry vyřeit nevýhoda sloupcových databází, kdy pokud je vytvořen složitější dotaz tak je potřeba
-přidat za dotaz `ALLOW FILTERING` což znamená že dotaz bude neefektivní a bude se procháze všechna data a pro každý
+Čímž se dá do značné míry vyřešit nevýhoda sloupcových databází, kdy pokud je vytvořen složitější dotaz, tak je potřeba
+přidat za dotaz `ALLOW FILTERING`, což znamená, že dotaz bude neefektivní a budou se procházet všechna data a pro každý
 řádek bude zkontrolována podmínka. Materialized views umožňují si tyto dotazy předpočítat a ukládat do databáze.
 
 ## Vložení dat a definice schématu
 
-Tato datové sada jsou distrubuovaný poouze jako CSV. Pro vložení dat do databáze je třeba pouze vytvořit name space,
-definovat tabulku a data vložit přímo funkcí `COPY` v `cqslh` lze vkládat z csv souboru. Není potřeba
+Tato datová sada je distribuována pouze jako CSV. Pro vložení dat do databáze je třeba pouze vytvořit namespace,
+definovat tabulku a data vložit přímo funkcí `COPY` v `cqlsh`. Lze vkládat z CSV souboru. Není potřeba
 algoritmicky nic provádět.
-
 
 [//]: <> (@formatter:off)
 
@@ -439,7 +301,7 @@ Processed: 22386 rows; Rate:   17053 rows/s; Avg. rate:   31068 rows/s
 22386 rows imported from 1 files in 0.721 seconds (0 skipped).
 ```
 
-### Ukázka dotazu
+## Ukázka dotazu
 
 Hlavní výhoda této databáze je možnost jednoduchého přidávání uzlů do klastru (Horizontální škálování). S tímto souvisí
 vysoká dostupnosta odlnost proti výpatku. Vzheldem k tomu, že jsme testovali pouze na datábázi s jedním uzlem, tak
