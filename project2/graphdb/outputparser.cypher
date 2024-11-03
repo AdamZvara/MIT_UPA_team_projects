@@ -1102,5 +1102,3 @@ CREATE (s0)-[:ROUTE]->(s1),
 (s18)-[:ROUTE]->(s19),
 (s19)-[:ROUTE]->(s18);
 
-CREATE INDEX route_line_idx IF NOT EXISTS FOR ()-[r:ROUTE]-() ON (r.line);
-

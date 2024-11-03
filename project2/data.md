@@ -106,9 +106,11 @@ CREATE
 (s21)-[:ROUTE]->(s22),
 (s22)-[:ROUTE]->(s21);
        
+
 /**
  * Tímto způsobem jsme vytvořil celou grafovou strukturu.
  */
+
 ```
 
 Výsledek je takový graf:

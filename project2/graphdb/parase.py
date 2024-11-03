@@ -111,9 +111,6 @@ class TramRouteParser:
             queries.append(route_query)
             queries.append("")
 
-        # Přidáme index na vlastnosti hrany pro rychlejší vyhledávání
-        queries.append("CREATE INDEX route_line_idx IF NOT EXISTS FOR ()-[r:ROUTE]-() ON (r.line);")
-        queries.append("")
 
         return "\n".join(queries)
 
