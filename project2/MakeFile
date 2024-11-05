@@ -1,4 +1,0 @@
-all:
-    grip --title="Projekt, 2. část: ukládání rozsáhlých dat v NoSQL databázích" dokumentace.md
-# pip install grip
-# it runs web server than you can print the file to pdf
