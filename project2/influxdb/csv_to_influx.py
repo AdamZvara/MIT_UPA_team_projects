@@ -7,7 +7,10 @@ def convert_to_line_protocol(csv_filename, output_filename):
             # Write the header to the output file
             outfile.write("# DDL\nCREATE DATABASE driving_tickets\n\n# DML\n# CONTEXT-DATABASE: driving_tickets\n\n")
 
-            reader = csv.DictReader(csvfile)
+            valid_lines = [csvfile.readline()] # Read the header
+            valid_lines += [line for line in csvfile if line.count("\"") == 2]
+
+            reader = csv.DictReader(valid_lines)
             for row in reader:
                 cislo_pripadu = row["Číslo případu"]
                 mesto_cinu = row["Místo činu"]
@@ -21,13 +24,20 @@ def convert_to_line_protocol(csv_filename, output_filename):
                 if bod == "":
                     bod = 0
 
+                # Skip the row if the case number is not a number
+                if not cislo_pripadu.isnumeric():
+                    continue
+
                 # Handle location - remove backslashes and quotes
                 mesto_cinu = mesto_cinu.replace("\\", "").strip().rstrip().replace("\"", "")
 
                 # Convert the date to Unix timestamp in seconds
-                date_str = row["Datum spáchání"]
-                date = datetime.strptime(date_str, "%Y-%m-%d")
-                timestamp_s = int(date.timestamp())
+                try:
+                    date_str = row["Datum spáchání"]
+                    date = datetime.strptime(date_str, "%Y-%m-%d")
+                    timestamp_s = int(date.timestamp())
+                except Exception: # Handle invalid date format
+                    continue
 
                 # Create the measurement name - format: <cislo_zakona>-<paragraf>-<odstavec>
                 measurement = f"{cislo_zakona}-{paragraf}-{odstavec}"
@@ -62,4 +72,5 @@ def convert_to_line_protocol(csv_filename, output_filename):
         print(f"An error occurred: {e}")
 
 # Example usage
-convert_to_line_protocol("dopravni_prestupky_2024.csv", "tickets.txt")
+filename = "20240101_20240630_dopravniprestupky.csv"
+convert_to_line_protocol(filename, "tickets.txt")
