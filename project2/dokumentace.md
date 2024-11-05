@@ -5,66 +5,61 @@ Autoři: Jakub Vlk (xvlkja07), Adam Zvara (xzvara01)
 **Název:** Zastávky MHD ve Statutárním městě Ostrava
 <br>
 **Odkazy:**
-https://data.gov.cz/datov%C3%A1-sada?iri=https%3A%2F%2Fdata.gov.cz%2Fzdroj%2Fdatov%C3%A9-sady%2F00845451%2F37085532
+[https://data.gov.cz/datov%C3%A1-sada?iri=https%3A%2F%2Fdata.gov.cz%2Fzdroj%2Fdatov%C3%A9-sady%2F00845451%2F37085532](https://data.gov.cz/datov%C3%A1-sada?iri=https%3A%2F%2Fdata.gov.cz%2Fzdroj%2Fdatov%C3%A9-sady%2F00845451%2F37085532)
 <br>
 **Distribuce:** GeoJSON
 <br>
 **Druh databáze:** neo4j
-<br>
-**Pro úplnost zde uvádíme data tak, jak jsme je získali z Wikipedie:** V souboru `lines.txt` je seznam linek
+
+*Pro úplnost zde uvádíme data tak, jak jsme je získali z Wikipedie: V souboru `graphdb/lines.txt` je seznam linek DPO (Dopravní Podnik Ostrava)*
 
 Pro grafové databáze se hodí především data, nad kterými chceme provádět grafové algoritmy. V případě našich dat
 se jedná o přirozenou reprezentaci vztahů mezi zastávkami a existujícími spoji. Neo4j má implementováno mnoho
 grafových algoritmů, které můžeme využít pro analýzu dat. Díky tomu můžeme snadno zjistit například nejkratší cestu mezi
-dvěma
-zastávkami.
+dvěma zastávkami.
 
 Databáze bude využita pro analýzu cestování v rámci města Ostravy, konkrétně pro zjištění existujících spojení mezi
 zastávkami. Vzhledem ke grafové povaze tohoto problému je grafová databáze ideálním řešením.
 
 Data jsou v nestrojově čitelné podobě, proto je nutné je nejprve zpracovat. K tomuto účelu jsme
-vytvořili Python script (přiložený ve složce graphdb), který data převedl do podoby Cypher scriptu pro import do
-Neo4j databáze.
-
-Informace o linkách byly využity pouze pro mapování dostupných spojení mezi zastávkami, jelikož
+vytvořili Python script (`graphdb/parse.py`), který data převedl do podoby Cypher scriptu pro import do
+Neo4j databáze. Informace o linkách byly využity pouze pro mapování dostupných spojení mezi zastávkami, jelikož
 DPO tato data neposkytuje ve strojově čitelném formátu. Podle dostupných informací neexistují v povolených
 datových sadách údaje o jízdních řádech ani o časech potřebných pro přestupy mezi linkami či zastávkami. Proto jsme
 nevytvářeli vážené hrany mezi zastávkami pro realističtější vyhledávání.
 
-Hlavní komplikací byla kvalita dat od Dopravního podniku Ostrava. Některé existující zastávky v datové sadě chyběly.
+Hlavní komplikací byla kvalita dat od DPO. Některé existující zastávky v datové sadě chyběly.
 Vyskytovaly se také inkonzistence v názvech zastávek (například odlišné názvy stejné zastávky pro tramvaje a autobusy -
 různé mezery, zkrácené či nezkrácené varianty) a nesoulady mezi názvy v jízdních řádech a datovou sadou (ověřeno z více
 zdrojů). Problematické bylo i označení některých zastávek jako pouze autobusových, přestože ve skutečnosti jsou i
-tramvajové. Bylo nezbytné
-data manuálně vyčistit a doplnit, což byl časově náročný proces.
+tramvajové. Bylo nezbytné data manuálně vyčistit a doplnit, což byl časově náročný proces.
 
-**Postup pro vložení dat do neo4j databáze je následující:**
+**Postup pro vložení dat do neo4j databáze je následující**
 
 1. Parsování dat z Wikipedie
     - Pouze rozdělení jednotlivých zastávek díky `-` a následné odstranění zbytečných znaků (mezer, tabulátorů).
 2. Propojení dat z Wikipedie a z dat DPO
     - Ruční kontrola a doplnění chybějících zastávek
     - Ruční kontrola a oprava názvů zastávek
-    - Propojení dat z Wikipedie a z dat Dopravního podniku Ostrava
+    - Propojení dat z Wikipedie a z dat DPO
 3. Vytvoření zastávek
     - Pro každou zastávku vytvořit nový uzel s názvem zastávky, souřadnicemi a informací o tom, zda je přístupná pro
       vozíčkáře.
 4. Propojení všech zastávek hranou, pokud existuje cesta mezi nimi (oběma směry, aby byl graf neorientovaný).
 
-## Vložení a definice schématu
+<div style="page-break-after: always;"></div>
+
+## Vložení dat a definice schématu
 
 ```sql
 /* Create all stops */
 CREATE
 CONSTRAINT stop_name IF NOT EXISTS FOR (s:Stop) REQUIRE s.name IS UNIQUE;
 
-UNWIND
-[
- {name: 'Hlavní nádraží',location: point({longitude: 18.268441009548248, latitude: 18.268441009548248}), wheelchair_accessible: False},
+UNWIND [
+{name: 'Hlavní nádraží',location: point({longitude: 18.268441009548248, latitude: 18.268441009548248}), wheelchair_accessible: False},
 {name: 'Náměstí S.Čecha',location: point({longitude: 18.272677009208753, latitude: 18.272677009208753}), wheelchair_accessible: False},
-{name: 'Muglinovská',location: point({longitude: 18.278012008641852, latitude: 18.278012008641852}), wheelchair_accessible: True},
        /* ... Ostaní zastávky... */
-{name: 'U Hradu',location: point({longitude: 18.296669009450927, latitude: 18.296669009450927}), wheelchair_accessible: True},
 {name: 'Daliborova',location: point({longitude: 18.254088009084025, latitude: 18.254088009084025}), wheelchair_accessible: False},
 {name: 'Kunčičky,kostel',location: point({longitude: 18.30481100852727, latitude: 18.30481100852727}), wheelchair_accessible: False}
 ] AS stop
@@ -74,97 +69,52 @@ CREATE
     name: stop.name,
     location: point({longitude: stop.longitude, latitude: stop.latitude}),
     wheelchair_accessible: stop.wheelchair_accessible
-}
-)
-WITH s
-RETURN count(*);
-            
+}) WITH s RETURN count(*);
+
 /* Create route 1 and its connections */
-// Create connections for route 1
 MATCH (s0:Stop {name: 'Hlavní nádraží'})
 MATCH (s1:Stop {name: 'Náměstí S.Čecha'})
-MATCH (s2:Stop {name: 'Muglinovská'})
-MATCH (s3:Stop {name: 'Křižíkova'})
-MATCH (s4:Stop {name: 'Důl Jindřich'})
-MATCH (s5:Stop {name: 'Stodolní'})
-MATCH (s6:Stop {name: 'Elektra'})
-MATCH (s7:Stop {name: 'Karolina'})
-MATCH (s8:Stop {name: 'Náměstí Republiky'})
-MATCH (s9:Stop {name: 'Don Bosco'})
-MATCH (s10:Stop {name: 'Dolní Vítkovice Hlubina'})
-MATCH (s11:Stop {name: 'Dolní Vítkovice'})
-MATCH (s12:Stop {name: 'Český dům'})
-MATCH (s13:Stop {name: 'Důl Jeremenko'})
-MATCH (s14:Stop {name: 'Kolonie Jeremenko'})
-MATCH (s15:Stop {name: 'Moravská'})
-MATCH (s16:Stop {name: 'Dřevoprodej'})
-MATCH (s17:Stop {name: 'Hrabůvka,kostel'})
-MATCH (s18:Stop {name: 'Hrabůvka,Poliklinika'})
-MATCH (s19:Stop {name: 'Josefa Kotase'})
-MATCH (s20:Stop {name: 'Antonína Poledníka'})
+/* ... Ostatní zastávky ... */
 MATCH (s21:Stop {name: 'Václava Jiřikovského'})
 MATCH (s22:Stop {name: 'Dubina'})
 CREATE
 (s0)-[:ROUTE]->(s1),
 (s1)-[:ROUTE]->(s0),
-(s1)-[:ROUTE]->(s2),
-/* ... Ostatní zastávky... */
-(s21)-[:ROUTE]->(s20),
+/* ... Ostatní spoje ... */
 (s21)-[:ROUTE]->(s22),
 (s22)-[:ROUTE]->(s21);
 
-/**
- * Tímto způsobem jsme vytvořil celou grafovou strukturu.
- */
+/* Tímto způsobem jsme vytvořil celou grafovou strukturu.
+Celá struktura je v souboru graphdb/data.cypher */
 ```
 
-Výsledek je takový graf:
+Data můžeme do databáze vložit pomocí příkazu `cypher-shell -u neo4j -p password < /data.cypher`.
 
-![Alt text]( graphdb/graph.svg )
+<div style="page-break-after: always;"></div>
+
+Výsledkem je takový graf:
+
+<img src="graphdb/graph.svg" width="500" height="500" style="display: block; margin: 0 auto">
 
 ## Ukázka dotazu
 
 ### Nejkratší cesta mezi dvěma zastávkami
 
 ```sql
-MATCH (start:Stop {name: 'Poruba,koupaliště'}), 
+MATCH (start:Stop {name: 'Poruba,koupaliště'}),
       (end:Stop {name: 'Osada Míru'}),
       path = shortestPath((start)-[:ROUTE*]-(end))
 RETURN path
 ```
 
-**Výsledek jak v textové tak grafické podobě.**
+Výsledek jak v textové tak grafické podobě.
 
-![Alt text]( graphdb/graph_II.svg )
+<img src="graphdb/graph_II.svg" width="300" height="300" style="display: block; margin: 0 auto">
 
-```text
-╒══════════════════════════════════════════════════════════════════════╕
-│path                                                                  │
-╞══════════════════════════════════════════════════════════════════════╡
-│(:Stop {wheelchair_accessible: true,name: "Poruba,koupaliště"})-[:ROUT│
-│E]->(:Stop {wheelchair_accessible: true,name: "Poruba,Vřesinská"})-[:R│
-│OUTE]->(:Stop {wheelchair_accessible: true,name: "Fakultní nemocnice"}│
-│)<-[:ROUTE]-(:Stop {wheelchair_accessible: true,name: "Hlavní třída"})│
-│<-[:ROUTE]-(:Stop {wheelchair_accessible: true,name: "Rektorát VŠB"})-│
-│[:ROUTE]->(:Stop {wheelchair_accessible: true,name: "Telekom.škola"})<│
-│-[:ROUTE]-(:Stop {wheelchair_accessible: true,name: "Třebovická"})<-[:│
-│ROUTE]-(:Stop {wheelchair_accessible: true,name: "Svinov,mosty"})<-[:R│
-│OUTE]-(:Stop {wheelchair_accessible: true,name: "Nová Ves,vodárna"})<-│
-│[:ROUTE]-(:Stop {wheelchair_accessible: false,name: "Střelnice"})<-[:R│
-│OUTE]-(:Stop {wheelchair_accessible: false,name: "Ferona"})-[:ROUTE]->│
-│(:Stop {wheelchair_accessible: true,name: "Hulvácká"})-[:ROUTE]->(:Sto│
-│p {wheelchair_accessible: false,name: "Dolní"})-[:ROUTE]->(:Stop {whee│
-│lchair_accessible: false,name: "Tylova"})<-[:ROUTE]-(:Stop {wheelchair│
-│_accessible: true,name: "Rodinná"})-[:ROUTE]->(:Stop {wheelchair_acces│
-│sible: true,name: "Kpt.Vajdy"})<-[:ROUTE]-(:Stop {wheelchair_accessibl│
-│e: false,name: "Rodimcevova"})-[:ROUTE]->(:Stop {wheelchair_accessible│
-│: true,name: "Zábřeh,vodárna"})<-[:ROUTE]-(:Stop {wheelchair_accessibl│
-│e: true,name: "Kotva"})-[:ROUTE]->(:Stop {wheelchair_accessible: true,│
-│name: "Kino Luna"})<-[:ROUTE]-(:Stop {wheelchair_accessible: true,name│
-│: "29.dubna"})<-[:ROUTE]-(:Stop {wheelchair_accessible: true,name: "No│
-│vé Výškovice"})<-[:ROUTE]-(:Stop {wheelchair_accessible: true,name: "V│
-│ýškovice"})                                                           │
-└──────────────────────────────────────────────────────────────────────┘
+<br>
+
+```C
+(:Stop {name: "Poruba,koupaliště", wheelchair_accessible: TRUE})-[:ROUTE]->(:Stop {name: "Poruba,Vřesinská", wheelchair_accessible: TRUE})-[:ROUTE]->(:Stop {name: "Fakultní nemocnice", wheelchair_accessible: TRUE})<-[:ROUTE]-(:Stop {name: "Hlavní třída", wheelchair_accessible: TRUE})<-[:ROUTE]-(:Stop {name: "Rektorát VŠB", wheelchair_accessible: TRUE})-[:ROUTE]->(:Stop {name: "Telekom.škola", wheelchair_accessible: TRUE})<-[:ROUTE]-(:Stop {name: "Třebovická", wheelchair_accessible: TRUE})<-[:ROUTE]-(:Stop {name: "Svinov, mosty", wheelchair_accessible: TRUE})<-[:ROUTE]-(:Stop {name: "Nová Ves,vodárna", wheelchair_accessible: TRUE})<-[:ROUTE]-(:Stop {name: "Mariánské náměstí", wheelchair_accessible: TRUE})-[:ROUTE]->(:Stop {name: "Dům energetiky", wheelchair_accessible: TRUE})<-[:ROUTE]-(:Stop {name: "Krajský úřad", wheelchair_accessible: TRUE})<-[:ROUTE]-(:Stop {name: "Náměstí Republiky", wheelchair_accessible: TRUE})-[:ROUTE]->(:Stop {name: "Karolina", wheelchair_accessible: TRUE})-[:ROUTE]->(:Stop {name: "Výstaviště", wheelchair_accessible: TRUE})-[:ROUTE]->(:Stop {name: "Hranečník", wheelchair_accessible: TRUE})<-[:ROUTE]-(:Stop {name: "Osada Míru", wheelchair_accessible: FALSE})
 ```
 
 ### Okružní jízda přes 3 vybrané zastávky
@@ -192,19 +142,18 @@ zde ukazujeme pouze poslední sloupec.
 
 ```text
 
-["Hlavní nádraží", "Náměstí S.Čecha", "Muglinovská", "Křižíkova", "Důl Jindřich", "Stodolní", "Elektra", "Karolina",
- "Náměstí Republiky", "Don Bosco", "Dolní Vítkovice", "Důl Jeremenko", "Dřevoprodej", "Hrabůvka,kostel", "Hrabůvka,
- Poliklinika", "Josefa Kotase", "Antonína Poledníka", "Dubina", "Antonína Poledníka", "Josefa Kotase", "Hrabůvka,
- Poliklinika", "Hrabůvka,kostel", "Dřevoprodej", "Důl Jeremenko", "Dolní Vítkovice", "Don Bosco", "Náměstí Republiky",
-  "Karolina", "Elektra","Stodolní", "Důl Jindřich", "Křižíkova", "Muglinovská", "Náměstí S.Čecha", "Hlavní nádraží"]:34
+["Hlavní nádraží", "Náměstí S.Čecha", "Muglinovská", "Křižíkova", "Důl Jindřich", "Stodolní", "Elektra", "Karolina", "Náměstí Republiky", "Don Bosco", "Dolní Vítkovice", "Důl Jeremenko", "Dřevoprodej", "Hrabůvka,kostel", "Hrabůvka, Poliklinika", "Josefa Kotase", "Antonína Poledníka", "Dubina", "Antonína Poledníka", "Josefa Kotase", "Hrabůvka, Poliklinika", "Hrabůvka,kostel", "Dřevoprodej", "Důl Jeremenko", "Dolní Vítkovice", "Don Bosco", "Náměstí Republiky", "Karolina", "Elektra","Stodolní", "Důl Jindřich", "Křižíkova", "Muglinovská", "Náměstí S.Čecha", "Hlavní nádraží"]:34
 
 ```
+
+<div style="page-break-after: always;"></div>
+
 
 # Databáze Cassandra - Sloupcová wide-column databáze
 
 **Název:** Statistika průjezdu vozidel ze sledovaných křižovatek v roce 2024
 <br>
-**Odkazy:** https://opendata.ostrava.cz/soubory/MMOIT/doprava/Statistika-poctu-prujezdu-2024.csv
+**Odkazy:** [https://opendata.ostrava.cz/soubory/MMOIT/doprava/Statistika-poctu-prujezdu-2024.csv](https://opendata.ostrava.cz/soubory/MMOIT/doprava/Statistika-poctu-prujezdu-2024.csv)
 <br>
 **Distribuce:** CSV
 <br>
@@ -260,10 +209,12 @@ Tato datová sada je dostupná pouze jako CSV. Pro vložení dat do databáze st
 definovat tabulku a data importovat přímo funkcí `COPY` v `cqlsh`. Lze importovat přímo z CSV souboru bez nutnosti
 další algoritmické úpravy.
 
+<div style="page-break-after: always;"></div>
+
 [//]: <> (@formatter:off)
 
 ```sql
-CREATE KEYSPACE IF NOT EXISTS traffic_monitoring 
+CREATE KEYSPACE IF NOT EXISTS traffic_monitoring
 WITH replication = {
     'class': 'SimpleStrategy',
     'replication_factor': 1
@@ -287,10 +238,10 @@ WITH HEADER = TRUE
 AND DELIMITER = ','
 AND DATETIMEFORMAT = '%d.%m.%Y %H:%M';
 ```
-    
+
 [//]: <> (@formatter:on)
 
-**Output:**
+**Výstup:**
 
 ```text
 Starting copy of traffic_monitoring.traffic_measurements with columns [datum, stanice, trida_objektu, pocet].
@@ -299,7 +250,7 @@ Processed: 22386 rows; Rate:   17053 rows/s; Avg. rate:   31068 rows/s
 ```
 ## Ukázka dotazu
 
-Hlavní výhoda této databáze je možnost jednoduchého přidávání uzlů do klastru (Horizontální škálování). S tímto souvisí
+Hlavní výhoda této databáze je možnost jednoduchého přidávání uzlů do klastru (horizontální škálování). S tímto souvisí
 vysoká dostupnost a odlnost proti výpadku. Vzhledem k tomu, že jsme testovali pouze na databázi s jedním uzlem, tak
 není možné demonstrovat funkce kolem redundance a distribuce zátěže což se hodí pro vysoké zátěže.
 
@@ -314,43 +265,49 @@ where stanice = 'Českobratrská x Sokolská třída - od konzervatoře'
   AND datum < '2024-01-05';
 ```
 
+<div style="page-break-after: always;"></div>
+
+**Výstup:**
+
 ```text
 
- stanice                                          | datum                           | pocet | trida_objektu
---------------------------------------------------+---------------------------------+-------+---------------
- Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 21:00:00.000000+0000 |     1 |       Ostatní
- Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 19:00:00.000000+0000 |     1 |       Ostatní
- Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 18:00:00.000000+0000 |     2 |       Ostatní
- Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 17:00:00.000000+0000 |     4 |       Ostatní
- Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 16:00:00.000000+0000 |    10 |       Ostatní
- Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 15:00:00.000000+0000 |    70 |         Velké
- Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 14:00:00.000000+0000 |    56 |         Velké
- Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 13:00:00.000000+0000 |    84 |         Velké
- Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 12:00:00.000000+0000 |   123 |         Velké
- Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 11:00:00.000000+0000 |    20 |         Velké
- Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 10:00:00.000000+0000 |    40 |         Velké
- Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 09:00:00.000000+0000 |    35 |         Velké
- Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 08:00:00.000000+0000 |    28 |         Velké
- Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 07:00:00.000000+0000 |     8 |         Velké
- Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 06:00:00.000000+0000 |     4 |       Ostatní
- Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 05:00:00.000000+0000 |     2 |         Velké
- Českobratrská x Sokolská třída - od konzervatoře | 2024-01-03 22:00:00.000000+0000 |     1 |       Ostatní
- Českobratrská x Sokolská třída - od konzervatoře | 2024-01-03 21:00:00.000000+0000 |     3 |         Velké
- Českobratrská x Sokolská třída - od konzervatoře | 2024-01-03 20:00:00.000000+0000 |     1 |         Velké
- Českobratrská x Sokolská třída - od konzervatoře | 2024-01-03 19:00:00.000000+0000 |     2 |         Velké
- Českobratrská x Sokolská třída - od konzervatoře | 2024-01-03 18:00:00.000000+0000 |     7 |       Ostatní
- Českobratrská x Sokolská třída - od konzervatoře | 2024-01-03 17:00:00.000000+0000 |     7 |       Ostatní
- Českobratrská x Sokolská třída - od konzervatoře | 2024-01-03 16:00:00.000000+0000 |    10 |         Velké
- Českobratrská x Sokolská třída - od konzervatoře | 2024-01-03 15:00:00.000000+0000 |    28 |         Velké
+ stanice                                          | datum               | pocet |  trida
+--------------------------------------------------+---------------------+-------+--------
+ Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 21:00:00 |     1 | Ostatní
+ Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 19:00:00 |     1 | Ostatní
+ Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 18:00:00 |     2 | Ostatní
+ Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 17:00:00 |     4 | Ostatní
+ Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 16:00:00 |    10 | Ostatní
+ Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 15:00:00 |    70 |   Velké
+ Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 14:00:00 |    56 |   Velké
+ Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 13:00:00 |    84 |   Velké
+ Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 12:00:00 |   123 |   Velké
+ Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 11:00:00 |    20 |   Velké
+ Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 10:00:00 |    40 |   Velké
+ Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 09:00:00 |    35 |   Velké
+ Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 08:00:00 |    28 |   Velké
+ Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 07:00:00 |     8 |   Velké
+ Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 06:00:00 |     4 | Ostatní
+ Českobratrská x Sokolská třída - od konzervatoře | 2024-01-04 05:00:00 |     2 |   Velké
+ Českobratrská x Sokolská třída - od konzervatoře | 2024-01-03 22:00:00 |     1 | Ostatní
+ Českobratrská x Sokolská třída - od konzervatoře | 2024-01-03 21:00:00 |     3 |   Velké
+ Českobratrská x Sokolská třída - od konzervatoře | 2024-01-03 20:00:00 |     1 |   Velké
+ Českobratrská x Sokolská třída - od konzervatoře | 2024-01-03 19:00:00 |     2 |   Velké
+ Českobratrská x Sokolská třída - od konzervatoře | 2024-01-03 18:00:00 |     7 | Ostatní
+ Českobratrská x Sokolská třída - od konzervatoře | 2024-01-03 17:00:00 |     7 | Ostatní
+ Českobratrská x Sokolská třída - od konzervatoře | 2024-01-03 16:00:00 |    10 |   Velké
+ Českobratrská x Sokolská třída - od konzervatoře | 2024-01-03 15:00:00 |    28 |   Velké
 
 (24 rows)
 
 ```
 
+<div style="page-break-after: always;"></div>
+
 # Dokumentová databáza
 
 **Názov**: Pocitová mapa míst 2023<br>
-**Odkaz**: https://opendata.ostrava.cz/soubory/DatovyPortal/pocitova_mapa_2023.csv<br>
+**Odkaz**: [https://opendata.ostrava.cz/soubory/DatovyPortal/pocitova_mapa_2023.csv](https://opendata.ostrava.cz/soubory/DatovyPortal/pocitova_mapa_2023.csv)<br>
 **Distribúcia**: CSV<br>
 **Druh databázy**: MongoDB<br>
 
@@ -415,31 +372,31 @@ príklade zisťujem počet recenzií jednotlivých typy pocitov
 v okruhu konkrétneho miesta (napr. 100 metrov - môžeme prakticky považovať za jednu lokalitu). Výsledok je zoradený
 podľa počtu recenzií zostupne:
 
-```
+```sql
 db.pocit_mapa.aggregate([
-    {
-        $geoNear: {
-            near: { type: "Point", coordinates: [18.273579, 49.850449] },         /* súradnice miesta */
-            distanceField: "distance",
-            maxDistance: 100,                                                     /* 100 metrov */
-            spherical: true                                                       /* použitie 2dsphere indexu */
-        }
-    },
-    {
-        $group: {
-            _id: "$Pocit",                                                        /* zoskupenie podľa typu pocitu */
-            count: { $count: {} }
-        }
-    },
-    {
-        $sort: {                                                                  /* zoradenie podľa počtu recenzií */
-            count: -1
-        }
+  {
+    $geoNear: {
+      near: { type: "Point", coordinates: [18.273579, 49.850449] },  /* súradnice miesta */
+      distanceField: "distance",
+      maxDistance: 100,   /* 100 metrova vzdialenost */
+      spherical: true     /* použitie 2dsphere indexu */
     }
+  },
+  {
+    $group: {
+      _id: "$Pocit",  /* zoskupenie podľa typu pocitu */
+      count: { $count: {} }
+    }
+  },
+  {
+    $sort: {  /* zoradenie podľa počtu recenzií (zostupne) */
+      count: -1
+    }
+  }
 ])
 ```
 
-**Output:**
+**Výstup:**
 
 ```bash
 [
@@ -456,24 +413,27 @@ prípade, ak by ich chcel zmeniť alebo index nad `pocit` v kombinácií s `kome
 dotazovania sa na navrhované zmeny, ktoré
 potom môžeme využiť pri tvorbe plánu rozvoja mesta. Príklad takéhoto využitia je v pozmenení predcházajúcej agregačnej
 pipeline, kde zobrazujeme komentáre k miestam,
-ktoré by sa mali rozvíjať.
+ktoré by sa mali rozvíjať:
 
-```
+<div style="page-break-after: always;"></div>
+
+
+```sql
 {
-    $match: {
-        Komentar: {$exists: true},                          /* filtrovanie príspevkov s komentárom */
-        Pocit: "Místo, které by se mělo rozvíjet"           /* filtrovanie podľa typu pocitu */
-    }
+  $match: {
+    Komentar: {$exists: true},  /* filtrovanie príspevkov s komentárom */
+    Pocit: "Místo, které by se mělo rozvíjet" /* filtrovanie podľa typu pocitu */
+  }
 },
 {
-    $project: {
-        _id: 0,                                             /* nezobrazovanie ID */
-        Komentar: 1                                         /* zobrazenie komentára */
-    }
+  $project: {
+    _id: 0,   /* nezobrazovanie ID */
+    Komentar: 1   /* zobrazenie komentára */
+  }
 }
 ```
 
-**Output:**
+**Výstup:**
 
 ```bash
 [
@@ -483,10 +443,12 @@ ktoré by sa mali rozvíjať.
 ]
 ```
 
+<div style="page-break-after: always;"></div>
+
 # Databáza časových radov
 
 **Názov**: Dopravní přestupky dle data a místa spáchání v roce 2024<br>
-**Odkaz**: https://opendata.ostrava.cz/soubory/DatovyPortal/prestupky/20240101_20240630_dopravniprestupky.csv<br>
+**Odkaz**: [https://opendata.ostrava.cz/soubory/DatovyPortal/prestupky/20240101_20240630_dopravniprestupky.cs](https://opendata.ostrava.cz/soubory/DatovyPortal/prestupky/20240101_20240630_dopravniprestupky.csv)<br>
 **Distribúcia**: CSV<br>
 **Druh databázy**: InfluxDB<br>
 
@@ -514,17 +476,15 @@ databázy vhodné.
 
 ## Vloženie dát a definícia schématu
 
-V prvom rade je nutné prevedenie CSV formátu do Influx line protokolu pomocou priloženého skriptu `csv_to_influx.py`.
-Pred samotným
-prevedením sme manuálne upravili chyby vyskytujúce sa v datasete, kvôli ktorým nemohol byť automaticky spracovaný alebo
-načítaný do
-databázy. Medzi tieto chyby patrili:
+V prvom rade je nutné prevedenie CSV formátu do Influx line protokolu pomocou priloženého skriptu `influxdb/csv_to_influx.py`. Pred samotným
+prevedením je potrebné odstrániť chyby vyskytujúce sa v datasete, kvôli ktorým by nemohol byť automaticky spracovaný alebo
+načítaný do databázy. Tieto chyby sú automaticky detekované a odstránené poskytnutým skriptom (chybné položky sú odstránené).
+Medzi tieto chyby patrí:
 
-- chybný dátum: `0202-05-16` pre prípad s číslom `23945` (záznam sme vymazali)
+- chybný dátum: `0202-05-16` pre prípad s číslom `23945`
 - miesto činu obsahuje (neescapnuté) úvodzovky a poruší automatizované spracovanie:
-  `" v Ostravě na ulici Hlučínská /autobusová zastávka "Přívoz\,Hllučínská"/"` - čísla prípadov `7390`, `28975` (zo
-  záznamov sme odstránili úvodzovky)
-- text v čísle prípadu: `10888-P` (zo záznamu sme odstránili `-P`)
+  `" v Ostravě na ulici Hlučínská /autobusová zastávka "Přívoz\,Hllučínská"/"` - čísla prípadov `7390`, `28975`
+- text v čísle prípadu: `10888-P`
 
 Zaroveň sme transformovali dátum do formátu Unix časovej značky (v sekundách). V neposlednom rade je dôležité si
 premyslieť rozloženie jednotlivých
@@ -573,9 +533,9 @@ influx -execute 'CREATE DATABASE driving_tickets'
 Následne môžeme importovať dáta z prevedeného CSV súboru (vznikol z `csv_to_influx.py`):
 
 ```bash
-root@e5bc91132687:/# influx -import -path=tickets.txt -precision=s -database=driving_tickets
+root@e5bc91132687:/ influx -import -path=tickets.txt -precision=s -database=driving_tickets
 2024/11/02 16:55:31 Processed 1 commands
-2024/11/02 16:55:31 Processed 29736 inserts
+2024/11/02 16:55:31 Processed 29687 inserts
 2024/11/02 16:55:31 Failed 0 inserts
 ```
 
@@ -586,17 +546,10 @@ prekročením rýchlosti
 v máji (5. mesiac) 2024 (realizované v InfluxQL):
 
 ```sql
-SELECT misto_cinu
-FROM "361/2000-125c-1"
-WHERE pismeno = 'f'
-  AND (bod = '2' OR bod = '3' OR bod = '4')
-  AND time
-    > '2024-05-01 00:00:00'
-  AND time
-    < '2024-05-31 23:59:59'
+SELECT misto_cinu FROM "361/2000-125c-1" WHERE pismeno = 'f' AND (bod = '2' OR bod = '3' OR bod = '4') AND time > '2024-05-01 00:00:00' AND time < '2024-05-31 23:59:59'
 ```
 
-**Output:**
+**Výstup:**
 
 ```
 2024-05-01T22:00:00Z na dálnici D1 v 366,9 km ve směru jízdy na Brno
@@ -609,13 +562,12 @@ Prípadne nás môže zaujímať celkový počet prípadov prerušenia pravidiel
 rokov 2023/2024:
 
 ```sql
-SELECT count(cislo_pripadu)
-FROM "361/2000-125c-1"
-WHERE time > '2023-08-01'
-GROUP BY time (4w)
+SELECT count(cislo_pripadu) FROM "361/2000-125c-1" WHERE time > '2023-08-01' GROUP BY time (4w)
 ```
 
-**Output:**
+<div style="page-break-after: always;"></div>
+
+**Výstup:**
 
 ```
 2023-07-06T00:00:00Z 0
@@ -636,9 +588,8 @@ GROUP BY time (4w)
 
 ## Poznámky:
 
-Jen pro úplnost zde uvadíme, že jsme testovali na jednom uzlu, v docker instancích. V příslušných složkách jsou bud
-docker-compose nebo jsem používali jsme přímo docker příkazy pro spuštění instancí.
-
-
-
+Iba pre úplnosť uvádzame, že všetky databázy sme testovali na jednom uzle v docker inštanciách. V príslušných adresároch
+je možné nájsť `compose.yml` súbory na spustenie inštancií databáz v docker kontajneroch. V prípade cassandry sme dodali aj
+úplnú definíciu databázy v `cassandra/data.cypher`. V prípade InfluxDB je nutné prekonvertovať dataset cez priložený skript.
+V ostatných prípadoch je možné pracovať priamo so stiahnuteľnými súbormi z portálu OpenData Ostrava.
 
