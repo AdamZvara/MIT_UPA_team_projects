@@ -1,9 +1,7 @@
-/*you havent visited these stops:  set()
-*/
 CREATE CONSTRAINT stop_name IF NOT EXISTS FOR (s:Stop) REQUIRE s.name IS UNIQUE;
 
 UNWIND [
- {name: 'Hlavní nádraží',location: point({longitude: 18.268441009548248, latitude: 18.268441009548248}), wheelchair_accessible: False},
+{name: 'Hlavní nádraží',location: point({longitude: 18.268441009548248, latitude: 18.268441009548248}), wheelchair_accessible: False},
 {name: 'Náměstí S.Čecha',location: point({longitude: 18.272677009208753, latitude: 18.272677009208753}), wheelchair_accessible: False},
 {name: 'Muglinovská',location: point({longitude: 18.278012008641852, latitude: 18.278012008641852}), wheelchair_accessible: True},
 {name: 'Křižíkova',location: point({longitude: 18.28043000878951, latitude: 18.28043000878951}), wheelchair_accessible: True},
@@ -112,8 +110,8 @@ UNWIND [
                 )
             WITH s
             RETURN count(*);
-            
-        
+
+
 
 // Create connections for route 1
 MATCH (s0:Stop {name: 'Hlavní nádraží'})
