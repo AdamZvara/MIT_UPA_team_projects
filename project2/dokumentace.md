@@ -1,3 +1,5 @@
+# Ukládání rozsáhlých dat v NoSQL databázích
+
 Autoři: Jakub Vlk (xvlkja07), Adam Zvara (xzvara01)
 
 # Databáze neo4j - grafová databáze
@@ -88,7 +90,7 @@ CREATE
 Celá struktura je v souboru graphdb/data.cypher */
 ```
 
-Data můžeme do databáze vložit pomocí příkazu `cypher-shell -u neo4j -p password < /data.cypher`.
+Data můžeme do databáze vložit pomocí příkazu (v kontejneru): `cypher-shell -u neo4j -p password < /import/data.cypher`.
 
 <div style="page-break-after: always;"></div>
 
@@ -589,7 +591,7 @@ SELECT count(cislo_pripadu) FROM "361/2000-125c-1" WHERE time > '2023-08-01' GRO
 ## Poznámky:
 
 Iba pre úplnosť uvádzame, že všetky databázy sme testovali na jednom uzle v docker inštanciách. V príslušných adresároch
-je možné nájsť `compose.yml` súbory na spustenie inštancií databáz v docker kontajneroch. V prípade cassandry sme dodali aj
-úplnú definíciu databázy v `cassandra/data.cypher`. V prípade InfluxDB je nutné prekonvertovať dataset cez priložený skript.
+je možné nájsť `compose.yml` súbory na spustenie inštancií databáz v docker kontajneroch. V prípade neo4j sme dodali aj
+úplnú definíciu databázy v `graphdb/data.cypher`. V prípade InfluxDB je nutné prekonvertovať dataset cez priložený skript.
 V ostatných prípadoch je možné pracovať priamo so stiahnuteľnými súbormi z portálu OpenData Ostrava.
 
